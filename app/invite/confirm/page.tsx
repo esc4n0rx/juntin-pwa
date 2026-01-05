@@ -1,17 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { GlassCard } from "@/components/glass-card"
 import { Button } from "@/components/ui/button"
 import { acceptInvite } from "@/lib/api/invites"
 import { createClient } from "@/lib/supabase/client"
-import { motion } from "framer-motion"
-import { toast } from "sonner"
 
 const supabase = createClient()
 
-export default function InviteConfirmPage() {
+function InviteConfirmContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const token = searchParams.get("token")
@@ -58,13 +56,6 @@ export default function InviteConfirmPage() {
         router.push(`/register?next=/invite/confirm?token=${token}`)
     }
 
-    // Handle next param in Login/Register pages requires update to those pages, 
-    // OR simpler: User registers -> Redirects to /select-mode.
-    // We need to support 'next' param in Login/Register to return here.
-    // For now, I will just direct them to login/register, and they might lose the flow unless I code the 'next' support.
-    // But MVP: user has to click the link again after login.
-    // Or I can update Login/Register to check for searchParams.
-
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50 flex items-center justify-center p-6">
             <GlassCard className="max-w-md w-full p-8 text-center">
@@ -103,5 +94,19 @@ export default function InviteConfirmPage() {
                 )}
             </GlassCard>
         </div>
+    )
+}
+
+export default function InviteConfirmPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50 flex items-center justify-center p-6">
+                <GlassCard className="max-w-md w-full p-8 text-center mb-4">
+                    <div className="animate-spin w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full mx-auto" />
+                </GlassCard>
+            </div>
+        }>
+            <InviteConfirmContent />
+        </Suspense>
     )
 }

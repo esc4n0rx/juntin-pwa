@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect } from "react"
 import { useAppStore } from "@/lib/store"
@@ -19,9 +19,9 @@ const DEFAULT_CATEGORIES = [
   { id: "4", name: "Lazer", icon: "🎮" },
 ]
 
-export default function CategoriesPage() {
+function CategoriesContent() {
   const router = useRouter()
-  const searchParams = useSearchParams() // Need to wrap in Suspense boundary if using next/navigation directly in page? Next.js App Router usually handles this, but `useSearchParams` client side is fine.
+  const searchParams = useSearchParams()
   const isEditing = searchParams.get("mode") === "edit"
 
   const mode = useAppStore((state) => state.mode)
@@ -201,5 +201,19 @@ export default function CategoriesPage() {
         </motion.div>
       </div>
     </div>
+  )
+}
+
+export default function CategoriesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50 p-6 flex items-center justify-center">
+        <GlassCard className="p-6">
+          <div className="animate-spin w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full mx-auto" />
+        </GlassCard>
+      </div>
+    }>
+      <CategoriesContent />
+    </Suspense>
   )
 }
