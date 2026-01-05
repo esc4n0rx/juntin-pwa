@@ -1,0 +1,177 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyToken } from "@/lib/auth-server";
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
+export async function GET(request: Request) {
+    try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get('auth_token')?.value;
+        if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const payload = verifyToken(token);
+        if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const adminDb = createAdminClient();
+
+        // 1. Get User Profile to find couple_id and mode
+        const { data: profile } = await adminDb
+            .from('profiles')
+            .select('couple_id, mode')
+            .eq('id', payload.userId)
+            .single();
+
+        if (!profile?.couple_id) {
+            return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 400 });
+        }
+
+        // 2. Get URL params for filtering
+        const { searchParams } = new URL(request.url);
+        const dateFilter = searchParams.get('date'); // Formato: YYYY-MM-DD
+
+        // 3. Fetch Transactions
+        let query = adminDb
+            .from('transactions')
+            .select(`
+                *,
+                category:categories(id, name, icon, color, type),
+                user:profiles(id, full_name, avatar_url)
+            `)
+            .eq('couple_id', profile.couple_id)
+            .order('date', { ascending: false })
+            .order('created_at', { ascending: false });
+
+        // Se dateFilter foi passado, filtrar por data específica
+        if (dateFilter) {
+            query = query.eq('date', dateFilter);
+        }
+
+        const { data: transactions, error } = await query;
+
+        if (error) throw error;
+
+        return NextResponse.json({ transactions: transactions || [] });
+
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get('auth_token')?.value;
+        if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const payload = verifyToken(token);
+        if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const adminDb = createAdminClient();
+
+        const { type, category_id, amount, date, description } = await request.json();
+
+        // Validações
+        if (!type || !['income', 'expense'].includes(type)) {
+            return NextResponse.json({ error: 'Tipo inválido' }, { status: 400 });
+        }
+        if (!category_id) {
+            return NextResponse.json({ error: 'Categoria obrigatória' }, { status: 400 });
+        }
+        if (!amount || amount <= 0) {
+            return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
+        }
+        if (!date) {
+            return NextResponse.json({ error: 'Data obrigatória' }, { status: 400 });
+        }
+
+        // Get couple_id and mode
+        const { data: profile } = await adminDb
+            .from('profiles')
+            .select('couple_id, mode')
+            .eq('id', payload.userId)
+            .single();
+
+        if (!profile?.couple_id) {
+            return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 400 });
+        }
+
+        // Verificar se a categoria pertence ao casal
+        const { data: category } = await adminDb
+            .from('categories')
+            .select('id')
+            .eq('id', category_id)
+            .or(`couple_id.is.null,couple_id.eq.${profile.couple_id}`)
+            .single();
+
+        if (!category) {
+            return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 });
+        }
+
+        // Criar transação
+        // Se mode === 'solo', user_id é sempre o próprio usuário
+        // Se mode === 'couple', user_id indica quem está lançando
+        const { data: transaction, error } = await adminDb
+            .from('transactions')
+            .insert({
+                type,
+                category_id,
+                amount,
+                date,
+                description: description || null,
+                couple_id: profile.couple_id,
+                user_id: payload.userId
+            })
+            .select(`
+                *,
+                category:categories(id, name, icon, color, type),
+                user:profiles(id, full_name, avatar_url)
+            `)
+            .single();
+
+        if (error) throw error;
+
+        return NextResponse.json({ transaction });
+
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get('auth_token')?.value;
+        if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const payload = verifyToken(token);
+        if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const { id } = await request.json();
+
+        if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
+
+        const adminDb = createAdminClient();
+
+        const { data: profile } = await adminDb
+            .from('profiles')
+            .select('couple_id')
+            .eq('id', payload.userId)
+            .single();
+
+        if (!profile?.couple_id) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
+        // Deletar apenas se pertence ao couple_id do usuário
+        const { error } = await adminDb
+            .from('transactions')
+            .delete()
+            .eq('id', id)
+            .eq('couple_id', profile.couple_id);
+
+        if (error) throw error;
+
+        return NextResponse.json({ success: true });
+
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+}
