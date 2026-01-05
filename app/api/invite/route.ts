@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
         // 3. Send Email
         const { data: emailData, error: emailError } = await resend.emails.send({
-            from: 'Juntin <onboarding@juntin.fun>',
+            from: 'Juntin <noreply@juntin.fun>',
             to: email,
             subject: `${senderName} te convidou para o Juntin`,
             html: `
