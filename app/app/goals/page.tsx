@@ -37,8 +37,8 @@ export default function GoalsPage() {
   const [name, setName] = useState("")
   const [target, setTarget] = useState("")
   const [selectedIcon, setSelectedIcon] = useState("🎯")
+  const [customAmounts, setCustomAmounts] = useState<{ [key: string]: string }>({})
 
-  // Sincronizar modo do usuário
   useEffect(() => {
     const syncUserMode = async () => {
       try {
@@ -54,7 +54,6 @@ export default function GoalsPage() {
     syncUserMode()
   }, [])
 
-  // Buscar objetivos
   useEffect(() => {
     fetchGoals()
   }, [])
@@ -107,13 +106,11 @@ export default function GoalsPage() {
 
       toast.success("Objetivo criado!")
 
-      // Reset form
       setName("")
       setTarget("")
       setSelectedIcon("🎯")
       setShowForm(false)
 
-      // Recarregar objetivos
       fetchGoals()
     } catch (error: any) {
       console.error('Erro ao criar objetivo:', error)
@@ -147,12 +144,22 @@ export default function GoalsPage() {
         toast.success("Progresso atualizado!")
       }
 
-      // Recarregar objetivos
       fetchGoals()
     } catch (error: any) {
       console.error('Erro ao adicionar valor:', error)
       toast.error(error.message || 'Erro ao adicionar valor')
     }
+  }
+
+  const handleAddCustomAmount = async (goalId: string) => {
+    const customAmount = customAmounts[goalId]
+    if (!customAmount || Number.parseFloat(customAmount) <= 0) {
+      toast.error("Digite um valor válido")
+      return
+    }
+
+    await handleAddToGoal(goalId, Number.parseFloat(customAmount))
+    setCustomAmounts({ ...customAmounts, [goalId]: "" })
   }
 
   const handleDeleteGoal = async (goalId: string) => {
@@ -363,28 +370,52 @@ export default function GoalsPage() {
                     </div>
 
                     {!isComplete && (
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => handleAddToGoal(goal.id, 100)}
-                          variant="outline"
-                          className="flex-1 h-10 rounded-xl text-sm"
-                        >
-                          + R$ 100
-                        </Button>
-                        <Button
-                          onClick={() => handleAddToGoal(goal.id, 500)}
-                          variant="outline"
-                          className="flex-1 h-10 rounded-xl text-sm"
-                        >
-                          + R$ 500
-                        </Button>
-                        <Button
-                          onClick={() => handleAddToGoal(goal.id, 1000)}
-                          variant="outline"
-                          className="flex-1 h-10 rounded-xl text-sm"
-                        >
-                          + R$ 1.000
-                        </Button>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleAddToGoal(goal.id, 100)}
+                            variant="outline"
+                            className="flex-1 h-10 rounded-xl text-sm"
+                          >
+                            + R$ 100
+                          </Button>
+                          <Button
+                            onClick={() => handleAddToGoal(goal.id, 500)}
+                            variant="outline"
+                            className="flex-1 h-10 rounded-xl text-sm"
+                          >
+                            + R$ 500
+                          </Button>
+                          <Button
+                            onClick={() => handleAddToGoal(goal.id, 1000)}
+                            variant="outline"
+                            className="flex-1 h-10 rounded-xl text-sm"
+                          >
+                            + R$ 1.000
+                          </Button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            placeholder="Valor personalizado"
+                            value={customAmounts[goal.id] || ""}
+                            onChange={(e) =>
+                              setCustomAmounts({ ...customAmounts, [goal.id]: e.target.value })
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleAddCustomAmount(goal.id)
+                              }
+                            }}
+                            className="flex-1 h-10 rounded-xl text-sm"
+                          />
+                          <Button
+                            onClick={() => handleAddCustomAmount(goal.id)}
+                            className={`h-10 rounded-xl px-6 ${theme === "bw" ? "bg-slate-800" : "bg-blue-500"} hover:opacity-90`}
+                          >
+                            Adicionar
+                          </Button>
+                        </div>
                       </div>
                     )}
 
