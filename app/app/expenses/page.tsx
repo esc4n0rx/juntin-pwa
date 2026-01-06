@@ -55,8 +55,6 @@ export default function ExpensesPage() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [description, setDescription] = useState("")
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
-  const [longPressedId, setLongPressedId] = useState<string | null>(null)
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
 
   // Sincronizar dados do usuário do banco com o store
   useEffect(() => {
@@ -125,20 +123,6 @@ export default function ExpensesPage() {
     }
   }
 
-  const handleLongPressStart = (transactionId: string) => {
-    const timer = setTimeout(() => {
-      setLongPressedId(transactionId)
-    }, 500) // 500ms para ativar o long press
-    setLongPressTimer(timer)
-  }
-
-  const handleLongPressEnd = () => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer)
-      setLongPressTimer(null)
-    }
-  }
-
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction)
     setType(transaction.type)
@@ -147,10 +131,13 @@ export default function ExpensesPage() {
     setDate(transaction.date)
     setDescription(transaction.description || "")
     setShowForm(true)
-    setLongPressedId(null)
   }
 
   const handleDelete = async (transactionId: string) => {
+    if (!confirm('Deseja realmente excluir este lançamento?')) {
+      return
+    }
+
     try {
       const response = await fetch(`/api/transactions/${transactionId}`, {
         method: 'DELETE',
@@ -162,7 +149,6 @@ export default function ExpensesPage() {
       }
 
       toast.success('Lançamento excluído!')
-      setLongPressedId(null)
       fetchData()
     } catch (error: any) {
       console.error('Erro ao excluir:', error)
@@ -396,20 +382,11 @@ export default function ExpensesPage() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="relative"
               >
-                <GlassCard
-                  className={`p-4 relative ${mode === "couple" ? "pt-10" : ""}`}
-                  onTouchStart={() => handleLongPressStart(transaction.id)}
-                  onTouchEnd={handleLongPressEnd}
-                  onTouchMove={handleLongPressEnd}
-                  onMouseDown={() => handleLongPressStart(transaction.id)}
-                  onMouseUp={handleLongPressEnd}
-                  onMouseLeave={handleLongPressEnd}
-                >
+                <GlassCard className={`p-4 relative select-none ${mode === "couple" ? "pt-10" : ""}`} style={{ WebkitTouchCallout: 'none' }}>
                   {mode === "couple" && transaction.user && (
                     <div
-                      className={`absolute top-2 right-2 px-2.5 py-1 rounded-lg text-xs font-medium ${
+                      className={`absolute top-2 left-2 px-2.5 py-1 rounded-lg text-xs font-medium ${
                         theme === "bw"
                           ? "bg-slate-200 text-slate-800"
                           : "bg-blue-100 text-blue-700"
@@ -418,7 +395,32 @@ export default function ExpensesPage() {
                       {transaction.user.full_name}
                     </div>
                   )}
-                  <div className="flex items-center justify-between">
+
+                  {/* Botões de ação */}
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <button
+                      onClick={() => handleEdit(transaction)}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors select-none ${
+                        theme === "bw"
+                          ? "bg-slate-200 hover:bg-slate-300"
+                          : "bg-blue-100 hover:bg-blue-200"
+                      }`}
+                      title="Editar"
+                      style={{ WebkitUserSelect: 'none', userSelect: 'none' }}
+                    >
+                      <span className="text-sm">✏️</span>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(transaction.id)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-100 hover:bg-red-200 transition-colors select-none"
+                      title="Excluir"
+                      style={{ WebkitUserSelect: 'none', userSelect: 'none' }}
+                    >
+                      <span className="text-sm">🗑️</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pr-20">
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${
@@ -433,7 +435,7 @@ export default function ExpensesPage() {
                       >
                         {transaction.category?.icon || "💰"}
                       </div>
-                      <div className={mode === "couple" ? "pr-20" : ""}>
+                      <div>
                         <h4 className="font-semibold text-slate-800">{transaction.category?.name || "Sem categoria"}</h4>
                         <p className="text-xs text-slate-500">
                           {new Date(transaction.date).toLocaleDateString("pt-BR")}
@@ -459,41 +461,6 @@ export default function ExpensesPage() {
                     </p>
                   </div>
                 </GlassCard>
-
-                {/* Menu contextual do long press */}
-                <AnimatePresence>
-                  {longPressedId === transaction.id && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute inset-0 z-10 flex items-center justify-center gap-3 bg-black/10 backdrop-blur-sm rounded-2xl"
-                      onClick={() => setLongPressedId(null)}
-                    >
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleEdit(transaction)
-                        }}
-                        className={`h-12 px-6 rounded-xl ${
-                          theme === "bw" ? "bg-slate-800" : "bg-blue-500"
-                        } hover:opacity-90 shadow-lg`}
-                      >
-                        ✏️ Editar
-                      </Button>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDelete(transaction.id)
-                        }}
-                        className="h-12 px-6 rounded-xl bg-red-500 hover:bg-red-600 shadow-lg"
-                      >
-                        🗑️ Excluir
-                      </Button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </motion.div>
             ))}
           </div>
