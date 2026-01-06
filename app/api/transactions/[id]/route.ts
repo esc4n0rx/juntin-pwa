@@ -3,7 +3,7 @@ import { verifyToken } from "@/lib/auth-server";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const cookieStore = await cookies();
         const token = cookieStore.get('auth_token')?.value;
@@ -13,7 +13,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const adminDb = createAdminClient();
-        const { id } = params;
+        const { id } = await params;
         const { type, category_id, amount, date, description } = await request.json();
 
         // Validações
@@ -93,7 +93,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const cookieStore = await cookies();
         const token = cookieStore.get('auth_token')?.value;
@@ -103,7 +103,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const adminDb = createAdminClient();
-        const { id } = params;
+        const { id } = await params;
 
         const { data: profile } = await adminDb
             .from('profiles')
