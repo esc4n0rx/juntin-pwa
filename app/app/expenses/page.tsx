@@ -54,6 +54,9 @@ export default function ExpensesPage() {
   const [amount, setAmount] = useState("")
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [description, setDescription] = useState("")
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [longPressedId, setLongPressedId] = useState<string | null>(null)
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
 
   // Sincronizar dados do usuário do banco com o store
   useEffect(() => {
@@ -122,26 +125,78 @@ export default function ExpensesPage() {
     }
   }
 
+  const handleLongPressStart = (transactionId: string) => {
+    const timer = setTimeout(() => {
+      setLongPressedId(transactionId)
+    }, 500) // 500ms para ativar o long press
+    setLongPressTimer(timer)
+  }
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer)
+      setLongPressTimer(null)
+    }
+  }
+
+  const handleEdit = (transaction: Transaction) => {
+    setEditingTransaction(transaction)
+    setType(transaction.type)
+    setSelectedCategory(transaction.category?.id || "")
+    setAmount(transaction.amount.toString().replace(".", ","))
+    setDate(transaction.date)
+    setDescription(transaction.description || "")
+    setShowForm(true)
+    setLongPressedId(null)
+  }
+
+  const handleDelete = async (transactionId: string) => {
+    try {
+      const response = await fetch(`/api/transactions/${transactionId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erro ao excluir lançamento')
+      }
+
+      toast.success('Lançamento excluído!')
+      setLongPressedId(null)
+      fetchData()
+    } catch (error: any) {
+      console.error('Erro ao excluir:', error)
+      toast.error(error.message || 'Erro ao excluir lançamento')
+    }
+  }
+
   const handleSubmit = async () => {
     if (!selectedCategory) {
       toast.error("Selecione uma categoria")
       return
     }
-    if (!amount || Number.parseFloat(amount) <= 0) {
+
+    // Converter vírgula para ponto antes de validar
+    const normalizedAmount = amount.replace(",", ".")
+    if (!normalizedAmount || Number.parseFloat(normalizedAmount) <= 0) {
       toast.error("Digite um valor válido")
       return
     }
 
     try {
-      const response = await fetch('/api/transactions', {
-        method: 'POST',
+      const url = editingTransaction
+        ? `/api/transactions/${editingTransaction.id}`
+        : '/api/transactions'
+
+      const response = await fetch(url, {
+        method: editingTransaction ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           type,
           category_id: selectedCategory,
-          amount: Number.parseFloat(amount),
+          amount: Number.parseFloat(normalizedAmount),
           date,
           description: description || null,
         }),
@@ -153,13 +208,16 @@ export default function ExpensesPage() {
         throw new Error(data.error || 'Erro ao salvar lançamento')
       }
 
-      toast.success(`${type === "income" ? "Receita" : "Despesa"} adicionada!`)
+      toast.success(editingTransaction
+        ? 'Lançamento atualizado!'
+        : `${type === "income" ? "Receita" : "Despesa"} adicionada!`)
 
       // Reset form
       setSelectedCategory("")
       setAmount("")
       setDescription("")
       setShowForm(false)
+      setEditingTransaction(null)
 
       // Recarregar transações
       fetchData()
@@ -177,7 +235,17 @@ export default function ExpensesPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-slate-800">Despesas</h1>
           <Button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              if (showForm) {
+                setShowForm(false)
+                setEditingTransaction(null)
+                setSelectedCategory("")
+                setAmount("")
+                setDescription("")
+              } else {
+                setShowForm(true)
+              }
+            }}
             className={`rounded-2xl ${theme === "bw" ? "bg-slate-800" : "bg-blue-500"} hover:opacity-90`}
           >
             {showForm ? "Cancelar" : "+ Adicionar"}
@@ -193,6 +261,11 @@ export default function ExpensesPage() {
               transition={{ duration: 0.3 }}
             >
               <GlassCard className="p-6 mb-6">
+                {editingTransaction && (
+                  <div className="mb-4 text-center">
+                    <p className="text-sm font-medium text-slate-600">Editando lançamento</p>
+                  </div>
+                )}
                 <div className="flex gap-2 mb-6">
                   <Button
                     onClick={() => setType("expense")}
@@ -218,7 +291,7 @@ export default function ExpensesPage() {
                   <div>
                     <Label className="mb-2 block">Categoria</Label>
                     <div className="grid grid-cols-3 gap-2">
-                      {categories.map((category) => (
+                      {Array.from(new Map(categories.map(cat => [cat.id, cat])).values()).map((category) => (
                         <button
                           key={category.id}
                           onClick={() => setSelectedCategory(category.id)}
@@ -243,10 +316,22 @@ export default function ExpensesPage() {
                     </Label>
                     <Input
                       id="amount"
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0,00"
                       value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        // Permite apenas números, vírgula e ponto
+                        const sanitized = value.replace(/[^\d,]/g, "")
+                        // Garante apenas uma vírgula
+                        const parts = sanitized.split(",")
+                        if (parts.length > 2) {
+                          setAmount(parts[0] + "," + parts.slice(1).join(""))
+                        } else {
+                          setAmount(sanitized)
+                        }
+                      }}
                       className="h-12 rounded-xl text-lg"
                     />
                   </div>
@@ -282,7 +367,7 @@ export default function ExpensesPage() {
                     onClick={handleSubmit}
                     className={`w-full h-12 rounded-xl ${theme === "bw" ? "bg-slate-800" : "bg-slate-800"} hover:opacity-90`}
                   >
-                    Salvar
+                    {editingTransaction ? "Atualizar" : "Salvar"}
                   </Button>
                 </div>
               </GlassCard>
@@ -311,8 +396,17 @@ export default function ExpensesPage() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
+                className="relative"
               >
-                <GlassCard className={`p-4 relative ${mode === "couple" ? "pt-10" : ""}`}>
+                <GlassCard
+                  className={`p-4 relative ${mode === "couple" ? "pt-10" : ""}`}
+                  onTouchStart={() => handleLongPressStart(transaction.id)}
+                  onTouchEnd={handleLongPressEnd}
+                  onTouchMove={handleLongPressEnd}
+                  onMouseDown={() => handleLongPressStart(transaction.id)}
+                  onMouseUp={handleLongPressEnd}
+                  onMouseLeave={handleLongPressEnd}
+                >
                   {mode === "couple" && transaction.user && (
                     <div
                       className={`absolute top-2 right-2 px-2.5 py-1 rounded-lg text-xs font-medium ${
@@ -365,6 +459,41 @@ export default function ExpensesPage() {
                     </p>
                   </div>
                 </GlassCard>
+
+                {/* Menu contextual do long press */}
+                <AnimatePresence>
+                  {longPressedId === transaction.id && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute inset-0 z-10 flex items-center justify-center gap-3 bg-black/10 backdrop-blur-sm rounded-2xl"
+                      onClick={() => setLongPressedId(null)}
+                    >
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEdit(transaction)
+                        }}
+                        className={`h-12 px-6 rounded-xl ${
+                          theme === "bw" ? "bg-slate-800" : "bg-blue-500"
+                        } hover:opacity-90 shadow-lg`}
+                      >
+                        ✏️ Editar
+                      </Button>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDelete(transaction.id)
+                        }}
+                        className="h-12 px-6 rounded-xl bg-red-500 hover:bg-red-600 shadow-lg"
+                      >
+                        🗑️ Excluir
+                      </Button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))}
           </div>
