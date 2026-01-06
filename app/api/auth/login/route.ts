@@ -31,13 +31,14 @@ export async function POST(request: Request) {
         // 3. Create Session Token
         const token = signToken({ userId: user.id, email: user.email });
 
-        // Set Cookie
+        // Set Cookie with 30 days expiration for PWA
         const cookieStore = await cookies();
         cookieStore.set('auth_token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 60 * 60 * 24 * 7, // 7 days
-            path: '/'
+            maxAge: 60 * 60 * 24 * 30, // 30 days for PWA
+            path: '/',
+            sameSite: 'lax'
         });
 
         // 4. Invite & Redirect Logic

@@ -46,14 +46,15 @@ export async function POST(request: Request) {
             setup: false
         });
 
-        // 4. Create Session
+        // 4. Create Session with 30 days expiration for PWA
         const token = signToken({ userId: userId, email: email });
         const cookieStore = await cookies();
         cookieStore.set('auth_token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 60 * 60 * 24 * 7,
-            path: '/'
+            maxAge: 60 * 60 * 24 * 30, // 30 days for PWA
+            path: '/',
+            sameSite: 'lax'
         });
 
         // 5. Check for Invites

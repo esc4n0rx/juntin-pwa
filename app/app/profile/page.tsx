@@ -197,11 +197,22 @@ export default function ProfilePage() {
     }
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm("Tem certeza que deseja sair?")) {
-      reset()
-      toast.success("Até logo!")
-      router.push("/")
+      try {
+        // Call logout API to clear cookies
+        await fetch('/api/auth/logout', { method: 'POST' })
+
+        // Reset store
+        reset()
+        toast.success("Até logo!")
+        router.push("/login")
+      } catch (error) {
+        console.error('Erro ao fazer logout:', error)
+        // Even if API fails, still clear local state
+        reset()
+        router.push("/login")
+      }
     }
   }
 
