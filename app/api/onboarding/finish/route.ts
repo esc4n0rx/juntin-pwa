@@ -116,8 +116,8 @@ export async function POST(request: Request) {
             const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
             const inviteUrl = `${origin}/invite/confirm?token=${token}`;
 
-            await resend.emails.send({
-                from: 'Juntin <onboarding@resend.dev>',
+            const emailResult = await resend.emails.send({
+                from: 'Juntin <noreply@juntin.fun>',
                 to: partnerEmail,
                 subject: `${senderName} te convidou para o Juntin`,
                 html: `
@@ -130,6 +130,11 @@ export async function POST(request: Request) {
         <p>Ou acesse: ${inviteUrl}</p>
         `,
             });
+
+            if (emailResult.error) {
+                console.error("[Resend] Email send failed:", emailResult.error);
+                throw new Error(`Falha ao enviar convite: ${emailResult.error.message}`);
+            }
         }
 
         return NextResponse.json({ success: true, redirect: '/app' });

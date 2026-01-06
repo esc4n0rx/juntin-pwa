@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
-import { Camera, UserCircle2 } from "lucide-react"
-import { useRef, useEffect } from "react"
+import { Camera, UserCircle2, Mail } from "lucide-react"
+import { useRef, useEffect, useState } from "react"
 import Image from "next/image"
 import { CategoryManagerModal } from "@/components/category-manager-modal"
 
@@ -35,6 +35,8 @@ export default function ProfilePage() {
 
   const userFileInputRef = useRef<HTMLInputElement>(null)
   const partnerFileInputRef = useRef<HTMLInputElement>(null)
+  const [pendingInvite, setPendingInvite] = useState<{ email: string; sentAt: string } | null>(null)
+  const [resendingInvite, setResendingInvite] = useState(false)
 
   // Função para buscar dados atualizados
   const fetchUserData = async () => {
@@ -60,6 +62,12 @@ export default function ProfilePage() {
           if (data.user.partner.avatar) {
             setPartnerAvatar(data.user.partner.avatar)
           }
+        }
+        // Atualizar convite pendente
+        if (data.user.pendingInvite) {
+          setPendingInvite(data.user.pendingInvite)
+        } else {
+          setPendingInvite(null)
         }
       }
     } catch (error) {
@@ -205,6 +213,31 @@ export default function ProfilePage() {
     }
   }
 
+  const handleResendInvite = async () => {
+    if (!pendingInvite) return
+
+    setResendingInvite(true)
+    try {
+      const response = await fetch('/api/invite/resend', {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao reenviar convite')
+      }
+
+      toast.success(`Convite reenviado para ${data.email}!`)
+      await fetchUserData() // Atualizar dados
+    } catch (error: any) {
+      console.error('Erro ao reenviar convite:', error)
+      toast.error(error.message || 'Erro ao reenviar convite')
+    } finally {
+      setResendingInvite(false)
+    }
+  }
+
   const frequencyLabels: Record<string, string> = {
     monthly: "Mensal",
     biweekly: "Quinzenal",
@@ -327,6 +360,29 @@ export default function ProfilePage() {
             </div>
           )}
         </GlassCard>
+
+        {mode === "couple" && pendingInvite && !partnerAvatar && (
+          <GlassCard className="p-6 mb-6">
+            <div className="flex items-start gap-3">
+              <div className={`p-3 rounded-full ${theme === "bw" ? "bg-slate-100" : "bg-yellow-50"}`}>
+                <Mail className={`w-5 h-5 ${theme === "bw" ? "text-slate-600" : "text-yellow-600"}`} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-slate-800 mb-1">Convite Pendente</h3>
+                <p className="text-sm text-slate-600 mb-3">
+                  O convite foi enviado para <span className="font-medium">{pendingInvite.email}</span> mas ainda não foi aceito.
+                </p>
+                <Button
+                  onClick={handleResendInvite}
+                  disabled={resendingInvite}
+                  className={`w-full h-10 rounded-xl ${theme === "bw" ? "bg-slate-800 hover:bg-slate-700" : "bg-blue-500 hover:bg-blue-600"}`}
+                >
+                  {resendingInvite ? "Reenviando..." : "Reenviar Convite"}
+                </Button>
+              </div>
+            </div>
+          </GlassCard>
+        )}
 
         <GlassCard className="p-6 mb-6">
           <h3 className="font-bold text-slate-800 mb-4">Configurações</h3>

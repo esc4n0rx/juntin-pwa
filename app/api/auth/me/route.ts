@@ -39,6 +39,7 @@ export async function GET(request: Request) {
 
         let coupleData = null;
         let partnerData = null;
+        let pendingInvite = null;
 
         if (profile?.couple_id) {
             const { data: couple } = await adminDb
@@ -65,6 +66,25 @@ export async function GET(request: Request) {
             }
         }
 
+        // Check for pending invites sent by this user
+        if (profile?.mode === 'couple' && !partnerData) {
+            const { data: invite } = await adminDb
+                .from('couple_invites')
+                .select('email, created_at')
+                .eq('sender_id', user.id)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (invite) {
+                pendingInvite = {
+                    email: invite.email,
+                    sentAt: invite.created_at
+                };
+            }
+        }
+
         return NextResponse.json({
             user: {
                 id: user.id,
@@ -77,7 +97,8 @@ export async function GET(request: Request) {
                 // Return couple income if exists, else 0
                 income: coupleData?.income_amount || 0,
                 incomeFrequency: coupleData?.income_frequency || 'monthly',
-                partner: partnerData
+                partner: partnerData,
+                pendingInvite: pendingInvite
             }
         });
 
