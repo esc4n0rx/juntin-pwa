@@ -14,7 +14,6 @@ export async function POST(request: Request) {
 
         const { investment_id, amount, date, description } = await request.json();
 
-        // Validações
         if (!investment_id) {
             return NextResponse.json({ error: 'ID do investimento obrigatório' }, { status: 400 });
         }
@@ -24,7 +23,6 @@ export async function POST(request: Request) {
 
         const adminDb = createAdminClient();
 
-        // Get couple_id
         const { data: profile } = await adminDb
             .from('profiles')
             .select('couple_id')
@@ -35,7 +33,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 400 });
         }
 
-        // Verificar se o investimento existe e pertence ao casal
         const { data: investment, error: fetchError } = await adminDb
             .from('investments')
             .select('id, couple_id, current_amount')
@@ -47,7 +44,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Investimento não encontrado' }, { status: 404 });
         }
 
-        // Criar aporte
         const { data: contribution, error: contributionError } = await adminDb
             .from('investment_contributions')
             .insert({
@@ -66,7 +62,6 @@ export async function POST(request: Request) {
 
         if (contributionError) throw contributionError;
 
-        // Buscar investimento atualizado (o trigger já atualizou o current_amount)
         const { data: updatedInvestment } = await adminDb
             .from('investments')
             .select(`
@@ -87,7 +82,6 @@ export async function POST(request: Request) {
     }
 }
 
-// GET - Buscar aportes de um investimento
 export async function GET(request: Request) {
     try {
         const cookieStore = await cookies();
@@ -106,7 +100,6 @@ export async function GET(request: Request) {
 
         const adminDb = createAdminClient();
 
-        // Get couple_id
         const { data: profile } = await adminDb
             .from('profiles')
             .select('couple_id')
@@ -117,7 +110,6 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 400 });
         }
 
-        // Buscar aportes
         const { data: contributions, error } = await adminDb
             .from('investment_contributions')
             .select(`

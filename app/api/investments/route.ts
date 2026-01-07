@@ -14,7 +14,6 @@ export async function GET(request: Request) {
 
         const adminDb = createAdminClient();
 
-        // Get User Profile to find couple_id
         const { data: profile } = await adminDb
             .from('profiles')
             .select('couple_id, mode')
@@ -25,7 +24,6 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 400 });
         }
 
-        // Fetch Investments for the couple with contribution count
         const { data: investments, error } = await adminDb
             .from('investments')
             .select(`
@@ -37,7 +35,6 @@ export async function GET(request: Request) {
 
         if (error) throw error;
 
-        // Para cada investimento, buscar total de aportes
         const investmentsWithContributions = await Promise.all(
             (investments || []).map(async (investment) => {
                 const { count } = await adminDb
@@ -72,7 +69,6 @@ export async function POST(request: Request) {
 
         const { name, type, icon, initial_amount, target_amount, institution } = await request.json();
 
-        // Validações
         if (!name || !name.trim()) {
             return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 });
         }
@@ -83,7 +79,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Valor inicial inválido' }, { status: 400 });
         }
 
-        // Get couple_id
         const { data: profile } = await adminDb
             .from('profiles')
             .select('couple_id')
@@ -94,7 +89,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 400 });
         }
 
-        // Criar investimento
         const { data: investment, error } = await adminDb
             .from('investments')
             .insert({

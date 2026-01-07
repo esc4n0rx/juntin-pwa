@@ -14,15 +14,12 @@ export async function GET(request: Request) {
 
         const adminDb = createAdminClient();
 
-        // 1. Get User Profile to find couple_id
         const { data: profile } = await adminDb
             .from('profiles')
             .select('couple_id')
             .eq('id', payload.userId)
             .single();
 
-        // 2. Fetch Categories
-        // Logic: Fetch System Defaults (couple_id is null) OR Couple's Custom (couple_id = user.couple_id)
         let query = adminDb.from('categories').select('*');
 
         if (profile?.couple_id) {
@@ -53,7 +50,6 @@ export async function POST(request: Request) {
 
         const { name, icon, color, type, budget_limit } = await request.json();
 
-        // Get couple_id
         const { data: profile } = await adminDb
             .from('profiles')
             .select('couple_id')
@@ -61,14 +57,6 @@ export async function POST(request: Request) {
             .single();
 
         if (!profile?.couple_id) {
-            // Should we allow creating categories without couple? 
-            // For now, let's assume yes (Solo mode might use couple_id logic later or user_id)
-            // But schema uses couple_id.
-            // If Solo, we really should have a couple_id (household).
-            // If not, we can insert with user_id if we change schema, but simpler: require couple_id.
-            // Since we didn't enforce couple creation for Solo in Register API yet (we should have), let's handle graceful failure.
-            // Actually, Solo usually doesn't have couple_id in my logic.
-            // Correct Fix: Solo users should also have a "Household" (couple table entry with 1 member).
             return NextResponse.json({ error: "Funcionalidade disponível apenas após configuração inicial" }, { status: 400 });
         }
 

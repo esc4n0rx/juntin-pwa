@@ -24,7 +24,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Missing email' }, { status: 400 })
         }
 
-        // 1. Create Invite Record
         const token = crypto.randomUUID();
 
         const { data: invite, error: insertError } = await adminDb
@@ -43,7 +42,6 @@ export async function POST(request: Request) {
             throw new Error(insertError.message)
         }
 
-        // 2. Get Sender Profile
         const { data: profile } = await adminDb
             .from('profiles')
             .select('full_name')
@@ -55,7 +53,6 @@ export async function POST(request: Request) {
         const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
         const inviteUrl = `${origin}/invite/confirm?token=${token}`
 
-        // 3. Send Email
         const { data: emailData, error: emailError } = await resend.emails.send({
             from: 'Juntin <noreply@juntin.fun>',
             to: email,

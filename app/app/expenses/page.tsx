@@ -37,7 +37,6 @@ type Transaction = {
   }
 }
 
-// Função helper para obter data no timezone de São Paulo
 const getSaoPauloDate = () => {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 }
@@ -226,7 +225,7 @@ export default function ExpensesPage() {
     <div className="p-6 pb-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-slate-800">Despesas</h1>
+          <h1 className={`text-3xl font-bold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>Despesas</h1>
           <Button
             onClick={() => {
               if (showForm) {
@@ -240,7 +239,9 @@ export default function ExpensesPage() {
                 setShowForm(true)
               }
             }}
-            className={`rounded-2xl ${theme === "bw" ? "bg-slate-800" : "bg-blue-500"} hover:opacity-90`}
+            className={`rounded-2xl ${
+              theme === "dark" ? "bg-blue-600 hover:bg-blue-700" : theme === "bw" ? "bg-slate-800" : "bg-blue-500"
+            } hover:opacity-90`}
           >
             {showForm ? "Cancelar" : "+ Adicionar"}
           </Button>
@@ -249,6 +250,7 @@ export default function ExpensesPage() {
         {/* Filtro de Data */}
         <GlassCard className="p-4 mb-6">
           <div className="flex items-center gap-2">
+            {/* BOTÃO HOJE */}
             <Button
               onClick={() => {
                 setSelectedDate(getSaoPauloDate())
@@ -257,29 +259,42 @@ export default function ExpensesPage() {
               variant={selectedDate === getSaoPauloDate() ? "default" : "outline"}
               className={`flex-1 h-10 rounded-xl text-sm ${
                 selectedDate === getSaoPauloDate()
-                  ? theme === "bw" ? "bg-slate-800" : "bg-blue-500"
-                  : "bg-transparent"
+                  ? theme === "dark" ? "bg-blue-600" : theme === "bw" ? "bg-slate-800" : "bg-blue-500"
+                  : theme === "dark" ? "bg-transparent border-slate-600 text-slate-300" : "bg-transparent"
               }`}
             >
               Hoje
             </Button>
-            <Button
-              onClick={() => {
-                const yesterday = new Date()
-                yesterday.setDate(yesterday.getDate() - 1)
-                const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
-                setSelectedDate(yesterdayStr)
-                setShowDatePicker(false)
-              }}
-              variant="outline"
-              className="flex-1 h-10 rounded-xl text-sm bg-transparent"
-            >
-              Ontem
-            </Button>
+
+            {(() => {
+              const yesterday = new Date()
+              yesterday.setDate(yesterday.getDate() - 1)
+              const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+              return (
+                <Button
+                  onClick={() => {
+                    setSelectedDate(yesterdayStr)
+                    setShowDatePicker(false)
+                  }}
+                  variant={selectedDate === yesterdayStr ? "default" : "outline"}
+                  className={`flex-1 h-10 rounded-xl text-sm ${
+                    selectedDate === yesterdayStr
+                      ? theme === "dark" ? "bg-blue-600" : theme === "bw" ? "bg-slate-800" : "bg-blue-500"
+                      : theme === "dark" ? "bg-transparent border-slate-600 text-slate-300" : "bg-transparent"
+                  }`}
+                >
+                  Ontem
+                </Button>
+              )
+            })()}
             <Button
               onClick={() => setShowDatePicker(!showDatePicker)}
-              variant="outline"
-              className="flex-1 h-10 rounded-xl text-sm bg-transparent"
+              variant={showDatePicker ? "default" : "outline"}
+              className={`flex-1 h-10 rounded-xl text-sm ${
+                showDatePicker
+                  ? theme === "dark" ? "bg-blue-600" : theme === "bw" ? "bg-slate-800" : "bg-blue-500"
+                  : theme === "dark" ? "bg-transparent border-slate-600 text-slate-300" : "bg-transparent"
+              }`}
             >
               {showDatePicker ? "Fechar" : "Escolher"}
             </Button>
@@ -307,7 +322,7 @@ export default function ExpensesPage() {
           </AnimatePresence>
 
           <div className="mt-3 text-center">
-            <p className="text-sm text-slate-600">
+            <p className={`text-sm ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>
               {selectedDate === getSaoPauloDate()
                 ? "Hoje"
                 : new Date(selectedDate + 'T00:00:00').toLocaleDateString('pt-BR', {
@@ -331,7 +346,7 @@ export default function ExpensesPage() {
               <GlassCard className="p-6 mb-6">
                 {editingTransaction && (
                   <div className="mb-4 text-center">
-                    <p className="text-sm font-medium text-slate-600">Editando lançamento</p>
+                    <p className={`text-sm font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>Editando lançamento</p>
                   </div>
                 )}
                 <div className="flex gap-2 mb-6">
@@ -339,7 +354,15 @@ export default function ExpensesPage() {
                     onClick={() => setType("expense")}
                     variant={type === "expense" ? "default" : "outline"}
                     className={`flex-1 h-12 rounded-xl ${
-                      type === "expense" ? (theme === "bw" ? "bg-slate-800" : "bg-pink-500") : "bg-transparent"
+                      type === "expense"
+                        ? theme === "dark"
+                          ? "bg-pink-600 hover:bg-pink-700"
+                          : theme === "bw"
+                          ? "bg-slate-800"
+                          : "bg-pink-500"
+                        : theme === "dark"
+                        ? "bg-transparent border-slate-600 text-slate-300"
+                        : "bg-transparent"
                     }`}
                   >
                     Despesa
@@ -348,7 +371,15 @@ export default function ExpensesPage() {
                     onClick={() => setType("income")}
                     variant={type === "income" ? "default" : "outline"}
                     className={`flex-1 h-12 rounded-xl ${
-                      type === "income" ? (theme === "bw" ? "bg-slate-800" : "bg-emerald-500") : "bg-transparent"
+                      type === "income"
+                        ? theme === "dark"
+                          ? "bg-emerald-600 hover:bg-emerald-700"
+                          : theme === "bw"
+                          ? "bg-slate-800"
+                          : "bg-emerald-500"
+                        : theme === "dark"
+                        ? "bg-transparent border-slate-600 text-slate-300"
+                        : "bg-transparent"
                     }`}
                   >
                     Receita
@@ -365,14 +396,18 @@ export default function ExpensesPage() {
                           onClick={() => setSelectedCategory(category.id)}
                           className={`p-3 rounded-xl transition-all ${
                             selectedCategory === category.id
-                              ? theme === "bw"
+                              ? theme === "dark"
+                                ? "bg-blue-900/50 ring-2 ring-blue-500"
+                                : theme === "bw"
                                 ? "bg-slate-200 ring-2 ring-slate-800"
                                 : "bg-blue-100 ring-2 ring-blue-400"
+                              : theme === "dark"
+                              ? "bg-slate-700/50"
                               : "bg-slate-200/50"
                           }`}
                         >
                           <div className="text-2xl mb-1">{category.icon}</div>
-                          <p className="text-xs font-medium text-slate-700 truncate">{category.name}</p>
+                          <p className={`text-xs font-medium truncate ${theme === "dark" ? "text-slate-200" : "text-slate-700"}`}>{category.name}</p>
                         </button>
                       ))}
                     </div>
@@ -433,7 +468,9 @@ export default function ExpensesPage() {
 
                   <Button
                     onClick={handleSubmit}
-                    className={`w-full h-12 rounded-xl ${theme === "bw" ? "bg-slate-800" : "bg-slate-800"} hover:opacity-90`}
+                    className={`w-full h-12 rounded-xl ${
+                      theme === "dark" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800"
+                    } hover:opacity-90`}
                   >
                     {editingTransaction ? "Atualizar" : "Salvar"}
                   </Button>
@@ -443,22 +480,22 @@ export default function ExpensesPage() {
           )}
         </AnimatePresence>
 
-        <h3 className="text-lg font-bold text-slate-800 mb-4">
+        <h3 className={`text-lg font-bold mb-4 ${theme === "dark" ? "text-white" : "text-slate-800"}`}>
           Lançamentos {selectedDate === getSaoPauloDate() ? "de Hoje" : ""}
         </h3>
 
         {loading ? (
           <GlassCard className="p-8 text-center">
             <div className="text-4xl mb-3">⏳</div>
-            <p className="text-slate-600">Carregando...</p>
+            <p className={theme === "dark" ? "text-slate-300" : "text-slate-600"}>Carregando...</p>
           </GlassCard>
         ) : recentTransactions.length === 0 ? (
           <GlassCard className="p-8 text-center">
             <div className="text-4xl mb-3">💸</div>
-            <p className="text-slate-600 mb-2">
+            <p className={`mb-2 ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>
               Nenhum lançamento {selectedDate === getSaoPauloDate() ? "hoje" : "nesta data"}
             </p>
-            <p className="text-sm text-slate-500">Clique em Adicionar para começar</p>
+            <p className={`text-sm ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>Clique em Adicionar para começar</p>
           </GlassCard>
         ) : (
           <div className="space-y-3">
@@ -469,11 +506,14 @@ export default function ExpensesPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <GlassCard className={`p-4 relative select-none ${mode === "couple" ? "pt-10" : ""}`} style={{ WebkitTouchCallout: 'none' }}>
-                  {mode === "couple" && transaction.user && (
+                <div style={{ WebkitTouchCallout: 'none' }}>
+                  <GlassCard className={`p-4 relative select-none ${mode === "couple" ? "pt-10" : ""}`}>
+                    {mode === "couple" && transaction.user && (
                     <div
                       className={`absolute top-2 left-2 px-2.5 py-1 rounded-lg text-xs font-medium ${
-                        theme === "bw"
+                        theme === "dark"
+                          ? "bg-blue-900/50 text-blue-300"
+                          : theme === "bw"
                           ? "bg-slate-200 text-slate-800"
                           : "bg-blue-100 text-blue-700"
                       }`}
@@ -487,7 +527,9 @@ export default function ExpensesPage() {
                     <button
                       onClick={() => handleEdit(transaction)}
                       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors select-none ${
-                        theme === "bw"
+                        theme === "dark"
+                          ? "bg-blue-900/50 hover:bg-blue-800/50"
+                          : theme === "bw"
                           ? "bg-slate-200 hover:bg-slate-300"
                           : "bg-blue-100 hover:bg-blue-200"
                       }`}
@@ -498,7 +540,11 @@ export default function ExpensesPage() {
                     </button>
                     <button
                       onClick={() => handleDelete(transaction.id)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-100 hover:bg-red-200 transition-colors select-none"
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors select-none ${
+                        theme === "dark"
+                          ? "bg-red-900/50 hover:bg-red-800/50"
+                          : "bg-red-100 hover:bg-red-200"
+                      }`}
                       title="Excluir"
                       style={{ WebkitUserSelect: 'none', userSelect: 'none' }}
                     >
@@ -506,15 +552,19 @@ export default function ExpensesPage() {
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between pr-20">
+                    <div className="flex items-center justify-between pr-20">
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${
                           transaction.type === "income"
-                            ? theme === "bw"
+                            ? theme === "dark"
+                              ? "bg-emerald-900/50"
+                              : theme === "bw"
                               ? "bg-slate-200"
                               : "bg-emerald-100"
-                            : theme === "bw"
+                            : theme === "dark"
+                              ? "bg-pink-900/50"
+                              : theme === "bw"
                               ? "bg-slate-200"
                               : "bg-pink-100"
                         }`}
@@ -522,22 +572,26 @@ export default function ExpensesPage() {
                         {transaction.category?.icon || "💰"}
                       </div>
                       <div>
-                        <h4 className="font-semibold text-slate-800">{transaction.category?.name || "Sem categoria"}</h4>
-                        <p className="text-xs text-slate-500">
+                        <h4 className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>{transaction.category?.name || "Sem categoria"}</h4>
+                        <p className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
                           {new Date(transaction.date).toLocaleDateString("pt-BR")}
                         </p>
                         {transaction.description && (
-                          <p className="text-xs text-slate-600 mt-1">{transaction.description}</p>
+                          <p className={`text-xs mt-1 ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>{transaction.description}</p>
                         )}
                       </div>
                     </div>
                     <p
                       className={`text-lg font-bold ${
                         transaction.type === "income"
-                          ? theme === "bw"
+                          ? theme === "dark"
+                            ? "text-emerald-400"
+                            : theme === "bw"
                             ? "text-slate-900"
                             : "text-emerald-600"
-                          : theme === "bw"
+                          : theme === "dark"
+                            ? "text-pink-400"
+                            : theme === "bw"
                             ? "text-slate-900"
                             : "text-pink-600"
                       }`}
@@ -546,7 +600,8 @@ export default function ExpensesPage() {
                       {transaction.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </p>
                   </div>
-                </GlassCard>
+                  </GlassCard>
+                </div>
               </motion.div>
             ))}
           </div>

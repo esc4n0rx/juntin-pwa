@@ -189,10 +189,12 @@ export default function GoalsPage() {
     <div className="p-6 pb-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-slate-800">Objetivos</h1>
+          <h1 className={`text-3xl font-bold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>Objetivos</h1>
           <Button
             onClick={() => setShowForm(!showForm)}
-            className={`rounded-2xl ${theme === "bw" ? "bg-slate-800" : "bg-blue-500"} hover:opacity-90`}
+            className={`rounded-2xl ${
+              theme === "dark" ? "bg-blue-600 hover:bg-blue-700" : theme === "bw" ? "bg-slate-800" : "bg-blue-500"
+            } hover:opacity-90`}
           >
             {showForm ? "Cancelar" : "+ Novo"}
           </Button>
@@ -207,11 +209,11 @@ export default function GoalsPage() {
               transition={{ duration: 0.3 }}
             >
               <GlassCard className="p-6 mb-6">
-                <h3 className="font-bold text-slate-800 mb-4">Novo Objetivo</h3>
+                <h3 className={`font-bold mb-4 ${theme === "dark" ? "text-white" : "text-slate-800"}`}>Novo Objetivo</h3>
 
                 <div className="space-y-4">
                   <div>
-                    <Label className="mb-2 block">Escolha um ícone</Label>
+                    <Label className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>Escolha um ícone</Label>
                     <div className="flex gap-2">
                       {GOAL_ICONS.map((icon) => (
                         <button
@@ -219,9 +221,13 @@ export default function GoalsPage() {
                           onClick={() => setSelectedIcon(icon)}
                           className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all ${
                             selectedIcon === icon
-                              ? theme === "bw"
+                              ? theme === "dark"
+                                ? "bg-blue-900/50 scale-110"
+                                : theme === "bw"
                                 ? "bg-slate-200 scale-110"
                                 : "bg-blue-100 scale-110"
+                              : theme === "dark"
+                              ? "bg-slate-700/50"
                               : "bg-slate-200/50"
                           }`}
                         >
@@ -232,7 +238,7 @@ export default function GoalsPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="name" className="mb-2 block">
+                    <Label htmlFor="name" className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>
                       Nome do Objetivo
                     </Label>
                     <Input
@@ -240,12 +246,14 @@ export default function GoalsPage() {
                       placeholder="Ex: Viagem dos Sonhos"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="h-12 rounded-xl"
+                      className={`h-12 rounded-xl ${
+                        theme === "dark" ? "bg-slate-800/50 text-white placeholder:text-slate-400 border-slate-600" : ""
+                      }`}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="target" className="mb-2 block">
+                    <Label htmlFor="target" className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>
                       Valor Alvo
                     </Label>
                     <Input
@@ -254,13 +262,17 @@ export default function GoalsPage() {
                       placeholder="R$ 0,00"
                       value={target}
                       onChange={(e) => setTarget(e.target.value)}
-                      className="h-12 rounded-xl text-lg"
+                      className={`h-12 rounded-xl text-lg ${
+                        theme === "dark" ? "bg-slate-800/50 text-white placeholder:text-slate-400 border-slate-600" : ""
+                      }`}
                     />
                   </div>
 
                   <Button
                     onClick={handleSubmit}
-                    className={`w-full h-12 rounded-xl ${theme === "bw" ? "bg-slate-800" : "bg-slate-800"} hover:opacity-90`}
+                    className={`w-full h-12 rounded-xl ${
+                      theme === "dark" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800"
+                    } hover:opacity-90`}
                   >
                     Criar Objetivo
                   </Button>
@@ -322,8 +334,8 @@ export default function GoalsPage() {
                           {isComplete ? "✅" : goal.icon}
                         </div>
                         <div>
-                          <h3 className="text-lg font-bold text-slate-800">{goal.name}</h3>
-                          <p className="text-sm text-slate-600">
+                          <h3 className={`text-lg font-bold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>{goal.name}</h3>
+                          <p className={`text-sm ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                             R$ {goal.current_amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} de R${" "}
                             {goal.target_amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </p>
@@ -346,8 +358,12 @@ export default function GoalsPage() {
 
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-slate-600">Progresso</span>
-                        <span className={`text-sm font-bold ${isComplete ? "text-emerald-600" : "text-slate-800"}`}>
+                        <span className={`text-sm ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>Progresso</span>
+                        <span className={`text-sm font-bold ${
+                          isComplete
+                            ? theme === "dark" ? "text-emerald-400" : "text-emerald-600"
+                            : theme === "dark" ? "text-white" : "text-slate-800"
+                        }`}>
                           {progress.toFixed(0)}%
                         </span>
                       </div>
@@ -375,21 +391,27 @@ export default function GoalsPage() {
                           <Button
                             onClick={() => handleAddToGoal(goal.id, 100)}
                             variant="outline"
-                            className="flex-1 h-10 rounded-xl text-sm"
+                            className={`flex-1 h-10 rounded-xl text-sm ${
+                              theme === "dark" ? "border-slate-600 text-black bg-white/90 hover:bg-white" : ""
+                            }`}
                           >
                             + R$ 100
                           </Button>
                           <Button
                             onClick={() => handleAddToGoal(goal.id, 500)}
                             variant="outline"
-                            className="flex-1 h-10 rounded-xl text-sm"
+                            className={`flex-1 h-10 rounded-xl text-sm ${
+                              theme === "dark" ? "border-slate-600 text-black bg-white/90 hover:bg-white" : ""
+                            }`}
                           >
                             + R$ 500
                           </Button>
                           <Button
                             onClick={() => handleAddToGoal(goal.id, 1000)}
                             variant="outline"
-                            className="flex-1 h-10 rounded-xl text-sm"
+                            className={`flex-1 h-10 rounded-xl text-sm ${
+                              theme === "dark" ? "border-slate-600 text-black bg-white/90 hover:bg-white" : ""
+                            }`}
                           >
                             + R$ 1.000
                           </Button>
@@ -407,11 +429,15 @@ export default function GoalsPage() {
                                 handleAddCustomAmount(goal.id)
                               }
                             }}
-                            className="flex-1 h-10 rounded-xl text-sm"
+                            className={`flex-1 h-10 rounded-xl text-sm ${
+                              theme === "dark" ? "bg-slate-800/50 text-white placeholder:text-slate-400 border-slate-600" : ""
+                            }`}
                           />
                           <Button
                             onClick={() => handleAddCustomAmount(goal.id)}
-                            className={`h-10 rounded-xl px-6 ${theme === "bw" ? "bg-slate-800" : "bg-blue-500"} hover:opacity-90`}
+                            className={`h-10 rounded-xl px-6 ${
+                              theme === "dark" ? "bg-blue-600 hover:bg-blue-700" : theme === "bw" ? "bg-slate-800" : "bg-blue-500"
+                            } hover:opacity-90`}
                           >
                             Adicionar
                           </Button>

@@ -86,8 +86,12 @@ export function BottomNav() {
     <nav
       className={cn(
         "fixed bottom-0 left-0 right-0 z-50 pb-safe",
-        theme === "bw" ? "bg-white/80" : "bg-white/70",
-        "backdrop-blur-xl border-t border-slate-200/50",
+        theme === "dark"
+          ? "bg-slate-900/50 border-t border-slate-700/50"
+          : theme === "bw"
+          ? "bg-white/80 border-t border-slate-200/50"
+          : "bg-white/70 border-t border-slate-200/50",
+        "backdrop-blur-xl",
       )}
     >
       <div className="flex items-center justify-around px-2 h-20">
@@ -102,7 +106,15 @@ export function BottomNav() {
               <motion.div
                 className={cn(
                   "flex flex-col items-center gap-1",
-                  isActive ? (theme === "bw" ? "text-slate-800" : "text-blue-500") : "text-slate-400",
+                  isActive
+                    ? theme === "dark"
+                      ? "text-white"
+                      : theme === "bw"
+                      ? "text-slate-800"
+                      : "text-blue-500"
+                    : theme === "dark"
+                    ? "text-slate-400"
+                    : "text-slate-400",
                 )}
                 whileTap={{ scale: 0.9 }}
               >
@@ -114,7 +126,11 @@ export function BottomNav() {
                   layoutId="activeTab"
                   className={cn(
                     "absolute -top-1 w-12 h-1 rounded-full",
-                    theme === "bw" ? "bg-slate-800" : "bg-blue-500",
+                    theme === "dark"
+                      ? "bg-white"
+                      : theme === "bw"
+                      ? "bg-slate-800"
+                      : "bg-blue-500",
                   )}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />

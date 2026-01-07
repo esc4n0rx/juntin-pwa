@@ -14,7 +14,6 @@ export async function POST(request: Request) {
 
         const { goal_id, amount } = await request.json();
 
-        // Validações
         if (!goal_id) {
             return NextResponse.json({ error: 'ID do objetivo obrigatório' }, { status: 400 });
         }
@@ -24,7 +23,6 @@ export async function POST(request: Request) {
 
         const adminDb = createAdminClient();
 
-        // Get couple_id
         const { data: profile } = await adminDb
             .from('profiles')
             .select('couple_id')
@@ -35,7 +33,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 400 });
         }
 
-        // Buscar o objetivo atual
         const { data: currentGoal, error: fetchError } = await adminDb
             .from('goals')
             .select('id, current_amount, target_amount, couple_id')
@@ -47,13 +44,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Objetivo não encontrado' }, { status: 404 });
         }
 
-        // Calcular novo saldo (não pode passar do target)
         const newAmount = Math.min(
             currentGoal.current_amount + amount,
             currentGoal.target_amount
         );
 
-        // Atualizar o objetivo
         const { data: updatedGoal, error: updateError } = await adminDb
             .from('goals')
             .update({
@@ -69,7 +64,6 @@ export async function POST(request: Request) {
 
         if (updateError) throw updateError;
 
-        // Verificar se completou o objetivo
         const isCompleted = newAmount >= currentGoal.target_amount;
 
         return NextResponse.json({

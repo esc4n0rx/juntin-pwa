@@ -3,7 +3,8 @@
     "allow": [
       "Bash(pnpm install:*)",
       "WebSearch",
-      "Bash(node scripts/update-sw-version.js:*)"
+      "Bash(node scripts/update-sw-version.js:*)",
+      "Bash(pnpm add:*)"
     ]
   }
 }

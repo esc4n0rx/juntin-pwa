@@ -18,7 +18,6 @@ export async function POST(request: Request) {
         const userId = payload.userId;
         const adminDb = createAdminClient();
 
-        // Get the most recent pending invite from this user
         const { data: invite, error: inviteError } = await adminDb
             .from('couple_invites')
             .select('*')
@@ -32,7 +31,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Nenhum convite pendente encontrado' }, { status: 404 });
         }
 
-        // Get sender profile
         const { data: profile } = await adminDb
             .from('profiles')
             .select('full_name')
@@ -43,7 +41,6 @@ export async function POST(request: Request) {
         const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         const inviteUrl = `${origin}/invite/confirm?token=${invite.token}`;
 
-        // Resend email
         const emailResult = await resend.emails.send({
             from: 'Juntin <noreply@juntin.fun>',
             to: invite.email,

@@ -34,6 +34,7 @@ export default function HomePage() {
   const user = useAppStore((state) => state.user)
   const mode = useAppStore((state) => state.mode)
   const theme = useAppStore((state) => state.theme)
+  const aiInsights = useAppStore((state) => state.aiInsights)
   const setMode = useAppStore((state) => state.setMode)
   const setUser = useAppStore((state) => state.setUser)
   const setPartnerEmail = useAppStore((state) => state.setPartnerEmail)
@@ -112,8 +113,8 @@ export default function HomePage() {
     <div className="p-6 pb-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="mb-8">
-          <h2 className="text-slate-600 text-sm mb-1">Olá,</h2>
-          <h1 className="text-3xl font-bold text-slate-800">
+          <h2 className={`text-sm mb-1 ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>Olá,</h2>
+          <h1 className={`text-3xl font-bold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>
             {user?.name || "Usuário"}
             {mode === "couple" && " 💑"}
           </h1>
@@ -121,8 +122,8 @@ export default function HomePage() {
 
         <GlassCard variant="blue" className="p-6 mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-slate-700 text-sm font-medium">Saldo Geral</span>
-            <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span className={`text-sm font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>Saldo Geral</span>
+            <svg className={`w-5 h-5 ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path
                 strokeLinecap="round"
@@ -133,13 +134,17 @@ export default function HomePage() {
             </svg>
           </div>
           {loading ? (
-            <h2 className="text-2xl font-bold text-slate-600">Carregando...</h2>
+            <h2 className={`text-2xl font-bold ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>Carregando...</h2>
           ) : (
             <>
-              <h2 className={`text-4xl font-black mb-1 ${theme === "bw" ? "text-slate-900" : "text-slate-800"}`}>
+              <h2 className={`text-4xl font-black mb-1 ${
+                theme === "dark" ? "text-white" : theme === "bw" ? "text-slate-900" : "text-slate-800"
+              }`}>
                 R$ {balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </h2>
-              <p className="text-xs text-slate-600">{balance >= 0 ? "Você está no azul!" : "Atenção aos gastos"}</p>
+              <p className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
+                {balance >= 0 ? "Você está no azul!" : "Atenção aos gastos"}
+              </p>
             </>
           )}
         </GlassCard>
@@ -148,16 +153,19 @@ export default function HomePage() {
           <GlassCard variant="green" className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center ${theme === "bw" ? "bg-slate-200" : "bg-emerald-400/30"
-                  }`}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                  theme === "dark" ? "bg-emerald-900/50" : theme === "bw" ? "bg-slate-200" : "bg-emerald-400/30"
+                }`}
               >
-                <svg className="w-5 h-5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className={`w-5 h-5 ${theme === "dark" ? "text-emerald-400" : "text-emerald-700"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
                 </svg>
               </div>
-              <span className="text-xs text-slate-600">Receitas</span>
+              <span className={`text-xs ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>Receitas</span>
             </div>
-            <p className={`text-xl font-bold ${theme === "bw" ? "text-slate-900" : "text-emerald-700"}`}>
+            <p className={`text-xl font-bold ${
+              theme === "dark" ? "text-emerald-400" : theme === "bw" ? "text-slate-900" : "text-emerald-700"
+            }`}>
               + R$ {totalIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </p>
           </GlassCard>
@@ -165,36 +173,85 @@ export default function HomePage() {
           <GlassCard variant="pink" className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center ${theme === "bw" ? "bg-slate-200" : "bg-pink-400/30"
-                  }`}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                  theme === "dark" ? "bg-pink-900/50" : theme === "bw" ? "bg-slate-200" : "bg-pink-400/30"
+                }`}
               >
-                <svg className="w-5 h-5 text-pink-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className={`w-5 h-5 ${theme === "dark" ? "text-pink-400" : "text-pink-700"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" />
                 </svg>
               </div>
-              <span className="text-xs text-slate-600">Despesas</span>
+              <span className={`text-xs ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>Despesas</span>
             </div>
-            <p className={`text-xl font-bold ${theme === "bw" ? "text-slate-900" : "text-pink-700"}`}>
+            <p className={`text-xl font-bold ${
+              theme === "dark" ? "text-pink-400" : theme === "bw" ? "text-slate-900" : "text-pink-700"
+            }`}>
               - R$ {totalExpenses.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </p>
           </GlassCard>
         </div>
 
+        {/* Badge de Dicas da IA */}
+        {aiInsights && aiInsights.dicas && aiInsights.dicas.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-6"
+          >
+            <GlassCard className={`p-5 ${
+              theme === "dark" ? "bg-gradient-to-br from-purple-900/40 to-blue-900/40" : theme === "bw" ? "bg-slate-100" : "bg-gradient-to-br from-purple-50 to-blue-50"
+            }`}>
+              <div className="flex items-center gap-2 mb-4">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                  theme === "dark" ? "bg-gradient-to-br from-purple-600 to-blue-600" : theme === "bw" ? "bg-slate-200" : "bg-gradient-to-br from-purple-500 to-blue-500"
+                }`}>
+                  <span className="text-white text-lg">💡</span>
+                </div>
+                <h3 className={`font-bold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>Dicas Personalizadas</h3>
+              </div>
+              <div className="space-y-2.5">
+                {aiInsights.dicas.map((dica, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`flex items-start gap-3 p-3 rounded-xl ${
+                      theme === "dark" ? "bg-slate-800/70" : theme === "bw" ? "bg-white" : "bg-white/70"
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                      theme === "dark"
+                        ? "bg-gradient-to-br from-purple-600 to-blue-600 text-white"
+                        : theme === "bw"
+                        ? "bg-slate-800 text-white"
+                        : "bg-gradient-to-br from-purple-500 to-blue-500 text-white"
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <p className={`text-sm flex-1 leading-relaxed ${theme === "dark" ? "text-slate-200" : "text-slate-700"}`}>{dica}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </GlassCard>
+          </motion.div>
+        )}
+
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-800">Transações Recentes</h3>
-          <button className="text-sm text-blue-600 font-medium">Ver todas</button>
+          <h3 className={`text-lg font-bold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>Transações Recentes</h3>
+          <button className={`text-sm font-medium ${theme === "dark" ? "text-blue-400" : "text-blue-600"}`}>Ver todas</button>
         </div>
 
         {loading ? (
           <GlassCard className="p-8 text-center">
             <div className="text-4xl mb-3">⏳</div>
-            <p className="text-slate-600">Carregando transações...</p>
+            <p className={theme === "dark" ? "text-slate-300" : "text-slate-600"}>Carregando transações...</p>
           </GlassCard>
         ) : recentTransactions.length === 0 ? (
           <GlassCard className="p-8 text-center">
             <div className="text-4xl mb-3">📊</div>
-            <p className="text-slate-600 mb-2">Nenhuma transação ainda</p>
-            <p className="text-sm text-slate-500">Comece adicionando suas receitas e despesas</p>
+            <p className={`mb-2 ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>Nenhuma transação ainda</p>
+            <p className={`text-sm ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>Comece adicionando suas receitas e despesas</p>
           </GlassCard>
         ) : (
           <div className="space-y-3">
@@ -209,7 +266,9 @@ export default function HomePage() {
                   {mode === "couple" && transaction.user && (
                     <div
                       className={`absolute top-2 right-2 px-2.5 py-1 rounded-lg text-xs font-medium ${
-                        theme === "bw"
+                        theme === "dark"
+                          ? "bg-blue-900/50 text-blue-300"
+                          : theme === "bw"
                           ? "bg-slate-200 text-slate-800"
                           : "bg-blue-100 text-blue-700"
                       }`}
@@ -222,10 +281,14 @@ export default function HomePage() {
                       <div
                         className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${
                           transaction.type === "income"
-                            ? theme === "bw"
+                            ? theme === "dark"
+                              ? "bg-emerald-900/50"
+                              : theme === "bw"
                               ? "bg-slate-200"
                               : "bg-emerald-100"
-                            : theme === "bw"
+                            : theme === "dark"
+                              ? "bg-pink-900/50"
+                              : theme === "bw"
                               ? "bg-slate-200"
                               : "bg-pink-100"
                         }`}
@@ -233,8 +296,8 @@ export default function HomePage() {
                         {transaction.category?.icon || "💰"}
                       </div>
                       <div>
-                        <h4 className="font-semibold text-slate-800">{transaction.category?.name || "Sem categoria"}</h4>
-                        <p className="text-xs text-slate-500">
+                        <h4 className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>{transaction.category?.name || "Sem categoria"}</h4>
+                        <p className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
                           {new Date(transaction.date).toLocaleDateString("pt-BR")}
                         </p>
                       </div>
@@ -243,10 +306,14 @@ export default function HomePage() {
                       <p
                         className={`font-bold ${
                           transaction.type === "income"
-                            ? theme === "bw"
+                            ? theme === "dark"
+                              ? "text-emerald-400"
+                              : theme === "bw"
                               ? "text-slate-900"
                               : "text-emerald-600"
-                            : theme === "bw"
+                            : theme === "dark"
+                              ? "text-pink-400"
+                              : theme === "bw"
                               ? "text-slate-900"
                               : "text-pink-600"
                         }`}
@@ -254,7 +321,7 @@ export default function HomePage() {
                         {transaction.type === "income" ? "+" : "-"} R${" "}
                         {transaction.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </p>
-                      {transaction.description && <p className="text-xs text-slate-500 mt-1">{transaction.description}</p>}
+                      {transaction.description && <p className={`text-xs mt-1 ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>{transaction.description}</p>}
                     </div>
                   </div>
                 </GlassCard>

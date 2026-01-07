@@ -33,6 +33,11 @@ export type User = {
   avatar?: string
 }
 
+export type AIInsights = {
+  analises: string[]
+  dicas: string[]
+}
+
 type AppState = {
   // User & Auth
   user: User | null
@@ -40,7 +45,7 @@ type AppState = {
   partnerEmail: string | null
   partnerAvatar?: string | null
   isAuthenticated: boolean
-  theme: "light" | "bw"
+  theme: "light" | "dark" | "bw"
 
   // Financial Data
   categories: Category[]
@@ -49,6 +54,9 @@ type AppState = {
   income: number
   incomeFrequency: string
 
+  // AI Insights
+  aiInsights: AIInsights | null
+
   // Actions
   setUser: (user: User) => void
   setMode: (mode: "solo" | "couple") => void
@@ -56,7 +64,7 @@ type AppState = {
   updateUserAvatar: (avatar: string) => void
   setPartnerAvatar: (avatar: string) => void
   setAuthenticated: (value: boolean) => void
-  toggleTheme: () => void
+  setTheme: (theme: "light" | "dark" | "bw") => void
   setCategories: (categories: Category[]) => void
   addCategory: (category: Category) => void
   updateCategory: (id: string, updates: Partial<Category>) => void
@@ -66,6 +74,7 @@ type AppState = {
   addGoal: (goal: Goal) => void
   updateGoal: (id: string, updates: Partial<Goal>) => void
   deleteGoal: (id: string) => void
+  setAIInsights: (insights: AIInsights | null) => void
   reset: () => void
 }
 
@@ -83,6 +92,7 @@ export const useAppStore = create<AppState>()(
       goals: [],
       income: 0,
       incomeFrequency: "monthly",
+      aiInsights: null,
 
       setUser: (user) => set({ user, isAuthenticated: true }),
       setMode: (mode) => set({ mode }),
@@ -90,7 +100,7 @@ export const useAppStore = create<AppState>()(
       updateUserAvatar: (avatar) => set((state) => ({ user: state.user ? { ...state.user, avatar } : null })),
       setPartnerAvatar: (avatar) => set({ partnerAvatar: avatar }),
       setAuthenticated: (value) => set({ isAuthenticated: value }),
-      toggleTheme: () => set((state) => ({ theme: state.theme === "light" ? "bw" : "light" })),
+      setTheme: (theme) => set({ theme }),
       setCategories: (categories) => set({ categories }),
       addCategory: (category) => set((state) => ({ categories: [...state.categories, category] })),
       updateCategory: (id, updates) =>
@@ -115,6 +125,7 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           goals: state.goals.filter((goal) => goal.id !== id),
         })),
+      setAIInsights: (insights) => set({ aiInsights: insights }),
       reset: () =>
         set({
           user: null,
@@ -126,6 +137,7 @@ export const useAppStore = create<AppState>()(
           transactions: [],
           goals: [],
           income: 0,
+          aiInsights: null,
         }),
     }),
     {

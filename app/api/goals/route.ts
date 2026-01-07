@@ -14,7 +14,6 @@ export async function GET(request: Request) {
 
         const adminDb = createAdminClient();
 
-        // 1. Get User Profile to find couple_id
         const { data: profile } = await adminDb
             .from('profiles')
             .select('couple_id, mode')
@@ -25,7 +24,6 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 400 });
         }
 
-        // 2. Fetch Goals for the couple
         const { data: goals, error } = await adminDb
             .from('goals')
             .select(`
@@ -57,7 +55,6 @@ export async function POST(request: Request) {
 
         const { name, icon, target_amount } = await request.json();
 
-        // Validações
         if (!name || !name.trim()) {
             return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 });
         }
@@ -65,7 +62,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Valor alvo inválido' }, { status: 400 });
         }
 
-        // Get couple_id
         const { data: profile } = await adminDb
             .from('profiles')
             .select('couple_id, mode')
@@ -76,7 +72,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 400 });
         }
 
-        // Criar objetivo
         const { data: goal, error } = await adminDb
             .from('goals')
             .insert({

@@ -22,7 +22,7 @@ export default function ProfilePage() {
   const partnerEmail = useAppStore((state) => state.partnerEmail)
   const partnerAvatar = useAppStore((state) => state.partnerAvatar)
   const theme = useAppStore((state) => state.theme)
-  const toggleTheme = useAppStore((state) => state.toggleTheme)
+  const setTheme = useAppStore((state) => state.setTheme)
   const categories = useAppStore((state) => state.categories)
   const income = useAppStore((state) => state.income)
   const incomeFrequency = useAppStore((state) => state.incomeFrequency)
@@ -256,9 +256,9 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="p-6 pb-8">
+    <div className={`p-6 pb-8 min-h-screen ${theme === "dark" ? "bg-slate-900" : ""}`}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-bold text-slate-800 mb-6">Perfil</h1>
+        <h1 className={`text-3xl font-bold mb-6 ${theme === "dark" ? "text-white" : "text-slate-800"}`}>Perfil</h1>
 
         <GlassCard className="p-6 mb-6">
           {mode === "couple" ? (
@@ -322,11 +322,11 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div className="text-center">
-                <h2 className="text-xl font-bold text-slate-800">{user?.name}</h2>
-                <p className="text-sm text-slate-600">{user?.email}</p>
+                <h2 className={`text-xl font-bold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>{user?.name}</h2>
+                <p className={`text-sm ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>{user?.email}</p>
                 <div className="flex items-center justify-center gap-1 mt-1">
                   <span className="text-pink-600 text-sm">💑</span>
-                  <span className="text-xs text-slate-500">Modo Casal</span>
+                  <span className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>Modo Casal</span>
                 </div>
               </div>
             </div>
@@ -356,16 +356,20 @@ export default function ProfilePage() {
                 />
               </div>
               <div className="text-center">
-                <h2 className="text-xl font-bold text-slate-800">{user?.name}</h2>
-                <p className="text-sm text-slate-600">{user?.email}</p>
+                <h2 className={`text-xl font-bold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>{user?.name}</h2>
+                <p className={`text-sm ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>{user?.email}</p>
               </div>
             </div>
           )}
 
           {mode === "couple" && partnerEmail && (
-            <div className={`p-3 rounded-xl ${theme === "bw" ? "bg-slate-100" : "bg-pink-50"}`}>
-              <p className="text-xs text-slate-600 mb-1">Parceiro(a) convidado:</p>
-              <p className={`text-sm font-medium ${theme === "bw" ? "text-slate-800" : "text-pink-700"}`}>
+            <div className={`p-3 rounded-xl ${
+              theme === "dark" ? "bg-slate-700/50" : theme === "bw" ? "bg-slate-100" : "bg-pink-50"
+            }`}>
+              <p className={`text-xs mb-1 ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>Parceiro(a) convidado:</p>
+              <p className={`text-sm font-medium ${
+                theme === "dark" ? "text-pink-400" : theme === "bw" ? "text-slate-800" : "text-pink-700"
+              }`}>
                 {partnerEmail}
               </p>
             </div>
@@ -375,18 +379,24 @@ export default function ProfilePage() {
         {mode === "couple" && pendingInvite && !partnerAvatar && (
           <GlassCard className="p-6 mb-6">
             <div className="flex items-start gap-3">
-              <div className={`p-3 rounded-full ${theme === "bw" ? "bg-slate-100" : "bg-yellow-50"}`}>
-                <Mail className={`w-5 h-5 ${theme === "bw" ? "text-slate-600" : "text-yellow-600"}`} />
+              <div className={`p-3 rounded-full ${
+                theme === "dark" ? "bg-yellow-900/50" : theme === "bw" ? "bg-slate-100" : "bg-yellow-50"
+              }`}>
+                <Mail className={`w-5 h-5 ${
+                  theme === "dark" ? "text-yellow-400" : theme === "bw" ? "text-slate-600" : "text-yellow-600"
+                }`} />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-slate-800 mb-1">Convite Pendente</h3>
-                <p className="text-sm text-slate-600 mb-3">
+                <h3 className={`font-bold mb-1 ${theme === "dark" ? "text-white" : "text-slate-800"}`}>Convite Pendente</h3>
+                <p className={`text-sm mb-3 ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                   O convite foi enviado para <span className="font-medium">{pendingInvite.email}</span> mas ainda não foi aceito.
                 </p>
                 <Button
                   onClick={handleResendInvite}
                   disabled={resendingInvite}
-                  className={`w-full h-10 rounded-xl ${theme === "bw" ? "bg-slate-800 hover:bg-slate-700" : "bg-blue-500 hover:bg-blue-600"}`}
+                  className={`w-full h-10 rounded-xl ${
+                    theme === "dark" ? "bg-blue-600 hover:bg-blue-700" : theme === "bw" ? "bg-slate-800 hover:bg-slate-700" : "bg-blue-500 hover:bg-blue-600"
+                  }`}
                 >
                   {resendingInvite ? "Reenviando..." : "Reenviar Convite"}
                 </Button>
@@ -396,43 +406,113 @@ export default function ProfilePage() {
         )}
 
         <GlassCard className="p-6 mb-6">
-          <h3 className="font-bold text-slate-800 mb-4">Configurações</h3>
+          <h3 className={`font-bold mb-4 ${theme === "dark" ? "text-white" : "text-slate-800"}`}>Aparência</h3>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="font-semibold text-slate-800">Modo Preto & Branco</Label>
-                <p className="text-xs text-slate-500">Remover cores do app</p>
+          <div className="space-y-3">
+            <button
+              onClick={() => setTheme("light")}
+              className={`w-full p-4 rounded-xl flex items-center justify-between transition-all ${
+                theme === "light"
+                  ? "bg-blue-500 text-white shadow-lg"
+                  : theme === "dark"
+                  ? "bg-slate-700/50 text-slate-300 hover:bg-slate-700"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${
+                  theme === "light" ? "bg-white/20" : theme === "dark" ? "bg-slate-600" : "bg-white"
+                }`}>
+                  ☀️
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold">Modo Claro</p>
+                  <p className={`text-xs ${theme === "light" ? "text-blue-100" : theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+                    Visual colorido e vibrante
+                  </p>
+                </div>
               </div>
-              <Switch checked={theme === "bw"} onCheckedChange={toggleTheme} />
-            </div>
+              {theme === "light" && <span className="text-xl">✓</span>}
+            </button>
+
+            <button
+              onClick={() => setTheme("dark")}
+              className={`w-full p-4 rounded-xl flex items-center justify-between transition-all ${
+                theme === "dark"
+                  ? "bg-slate-700 text-white shadow-lg border-2 border-slate-600"
+                  : theme === "light"
+                  ? "bg-white text-slate-700 hover:bg-slate-50"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${
+                  theme === "dark" ? "bg-slate-600" : "bg-slate-200"
+                }`}>
+                  🌙
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold">Modo Escuro</p>
+                  <p className={`text-xs ${theme === "dark" ? "text-slate-300" : "text-slate-500"}`}>
+                    Ideal para ambientes com pouca luz
+                  </p>
+                </div>
+              </div>
+              {theme === "dark" && <span className="text-xl">✓</span>}
+            </button>
+
+            <button
+              onClick={() => setTheme("bw")}
+              className={`w-full p-4 rounded-xl flex items-center justify-between transition-all ${
+                theme === "bw"
+                  ? "bg-slate-800 text-white shadow-lg"
+                  : theme === "dark"
+                  ? "bg-slate-700/50 text-slate-300 hover:bg-slate-700"
+                  : "bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${
+                  theme === "bw" ? "bg-slate-700" : theme === "dark" ? "bg-slate-600" : "bg-slate-200"
+                }`}>
+                  ⚫
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold">Preto & Branco</p>
+                  <p className={`text-xs ${theme === "bw" ? "text-slate-300" : theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+                    Sem cores, apenas tons de cinza
+                  </p>
+                </div>
+              </div>
+              {theme === "bw" && <span className="text-xl">✓</span>}
+            </button>
           </div>
         </GlassCard>
 
 
         <GlassCard className="p-6 mb-6">
-          <h3 className="font-bold text-slate-800 mb-4">Dados Financeiros</h3>
+          <h3 className={`font-bold mb-4 ${theme === "dark" ? "text-white" : "text-slate-800"}`}>Dados Financeiros</h3>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between py-3 border-b border-slate-200/50">
-              <span className="text-sm text-slate-600">Renda</span>
-              <span className="font-semibold text-slate-800">
+            <div className={`flex items-center justify-between py-3 border-b ${theme === "dark" ? "border-slate-700/50" : "border-slate-200/50"}`}>
+              <span className={`text-sm ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>Renda</span>
+              <span className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>
                 R$ {income.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </span>
             </div>
-            <div className="flex items-center justify-between py-3 border-b border-slate-200/50">
-              <span className="text-sm text-slate-600">Frequência</span>
-              <span className="font-semibold text-slate-800">
+            <div className={`flex items-center justify-between py-3 border-b ${theme === "dark" ? "border-slate-700/50" : "border-slate-200/50"}`}>
+              <span className={`text-sm ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>Frequência</span>
+              <span className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>
                 {frequencyLabels[incomeFrequency] || incomeFrequency}
               </span>
             </div>
-            {/* Real Category Count from API will be implemented in future refactor of store or direct fetch here. 
-                For MVP, `categories` store might be stale if we don't sync. 
+            {/* Real Category Count from API will be implemented in future refactor of store or direct fetch here.
+                For MVP, `categories` store might be stale if we don't sync.
                 Ideally, Profile should fetch from /api/categories.
             */}
             <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-slate-600">Categorias</span>
-              <span className="font-semibold text-slate-800">
+              <span className={`text-sm ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>Categorias</span>
+              <span className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>
                 {/* For now showing static or store length, verifying API later */}
                 {categories.length > 0 ? categories.length : "Padrão"}
               </span>
@@ -450,11 +530,11 @@ export default function ProfilePage() {
         </GlassCard>
 
         <GlassCard className="p-6 mb-6">
-          <h3 className="font-bold text-slate-800 mb-2">Sobre o JUNTIN</h3>
-          <p className="text-sm text-slate-600 mb-3">
+          <h3 className={`font-bold mb-2 ${theme === "dark" ? "text-white" : "text-slate-800"}`}>Sobre o JUNTIN</h3>
+          <p className={`text-sm mb-3 ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>
             Aplicativo de controle financeiro individual ou em casal. Versão 1.0.0
           </p>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className={`flex items-center gap-2 text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
             <span>Desenvolvido com</span>
             <span className="text-pink-500">❤️</span>
             <span>por v0</span>

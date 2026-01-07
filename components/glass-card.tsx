@@ -26,6 +26,12 @@ export function GlassCard({ children, className, variant = "default" }: GlassCar
       green: "bg-emerald-400/20 backdrop-blur-xl border-emerald-200/30",
       pink: "bg-pink-400/20 backdrop-blur-xl border-pink-200/30",
     },
+    dark: {
+      default: "bg-slate-800/90 backdrop-blur-xl border-slate-700/50",
+      blue: "bg-blue-900/60 backdrop-blur-xl border-blue-700/50",
+      green: "bg-emerald-900/60 backdrop-blur-xl border-emerald-700/50",
+      pink: "bg-pink-900/60 backdrop-blur-xl border-pink-700/50",
+    },
     bw: {
       default: "bg-white/70 backdrop-blur-xl border-gray-200/30",
       blue: "bg-gray-100/70 backdrop-blur-xl border-gray-300/30",
