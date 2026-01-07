@@ -37,6 +37,11 @@ type Transaction = {
   }
 }
 
+// Função helper para obter data no timezone de São Paulo
+const getSaoPauloDate = () => {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+}
+
 export default function ExpensesPage() {
   const theme = useAppStore((state) => state.theme)
   const mode = useAppStore((state) => state.mode)
@@ -52,9 +57,11 @@ export default function ExpensesPage() {
   const [type, setType] = useState<"income" | "expense">("expense")
   const [selectedCategory, setSelectedCategory] = useState("")
   const [amount, setAmount] = useState("")
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
+  const [date, setDate] = useState(getSaoPauloDate)
   const [description, setDescription] = useState("")
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [selectedDate, setSelectedDate] = useState(getSaoPauloDate)
+  const [showDatePicker, setShowDatePicker] = useState(false)
 
   // Sincronizar dados do usuário do banco com o store
   useEffect(() => {
@@ -93,7 +100,7 @@ export default function ExpensesPage() {
   // Buscar categorias e transações do dia
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [selectedDate])
 
   const fetchData = async () => {
     try {
@@ -107,9 +114,8 @@ export default function ExpensesPage() {
         setCategories(categoriesData.categories)
       }
 
-      // Buscar transações do dia atual (timezone São Paulo)
-      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
-      const transactionsRes = await fetch(`/api/transactions?date=${today}`)
+      // Buscar transações da data selecionada
+      const transactionsRes = await fetch(`/api/transactions?date=${selectedDate}`)
       const transactionsData = await transactionsRes.json()
 
       if (transactionsRes.ok && transactionsData.transactions) {
@@ -201,6 +207,7 @@ export default function ExpensesPage() {
       // Reset form
       setSelectedCategory("")
       setAmount("")
+      setDate(getSaoPauloDate())
       setDescription("")
       setShowForm(false)
       setEditingTransaction(null)
@@ -227,6 +234,7 @@ export default function ExpensesPage() {
                 setEditingTransaction(null)
                 setSelectedCategory("")
                 setAmount("")
+                setDate(getSaoPauloDate())
                 setDescription("")
               } else {
                 setShowForm(true)
@@ -237,6 +245,80 @@ export default function ExpensesPage() {
             {showForm ? "Cancelar" : "+ Adicionar"}
           </Button>
         </div>
+
+        {/* Filtro de Data */}
+        <GlassCard className="p-4 mb-6">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => {
+                setSelectedDate(getSaoPauloDate())
+                setShowDatePicker(false)
+              }}
+              variant={selectedDate === getSaoPauloDate() ? "default" : "outline"}
+              className={`flex-1 h-10 rounded-xl text-sm ${
+                selectedDate === getSaoPauloDate()
+                  ? theme === "bw" ? "bg-slate-800" : "bg-blue-500"
+                  : "bg-transparent"
+              }`}
+            >
+              Hoje
+            </Button>
+            <Button
+              onClick={() => {
+                const yesterday = new Date()
+                yesterday.setDate(yesterday.getDate() - 1)
+                const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+                setSelectedDate(yesterdayStr)
+                setShowDatePicker(false)
+              }}
+              variant="outline"
+              className="flex-1 h-10 rounded-xl text-sm bg-transparent"
+            >
+              Ontem
+            </Button>
+            <Button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              variant="outline"
+              className="flex-1 h-10 rounded-xl text-sm bg-transparent"
+            >
+              {showDatePicker ? "Fechar" : "Escolher"}
+            </Button>
+          </div>
+
+          <AnimatePresence>
+            {showDatePicker && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4"
+              >
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value)
+                    setShowDatePicker(false)
+                  }}
+                  className="h-12 rounded-xl"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="mt-3 text-center">
+            <p className="text-sm text-slate-600">
+              {selectedDate === getSaoPauloDate()
+                ? "Hoje"
+                : new Date(selectedDate + 'T00:00:00').toLocaleDateString('pt-BR', {
+                    timeZone: 'America/Sao_Paulo',
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+            </p>
+          </div>
+        </GlassCard>
 
         <AnimatePresence>
           {showForm && (
@@ -361,7 +443,9 @@ export default function ExpensesPage() {
           )}
         </AnimatePresence>
 
-        <h3 className="text-lg font-bold text-slate-800 mb-4">Lançamentos de Hoje</h3>
+        <h3 className="text-lg font-bold text-slate-800 mb-4">
+          Lançamentos {selectedDate === getSaoPauloDate() ? "de Hoje" : ""}
+        </h3>
 
         {loading ? (
           <GlassCard className="p-8 text-center">
@@ -371,7 +455,9 @@ export default function ExpensesPage() {
         ) : recentTransactions.length === 0 ? (
           <GlassCard className="p-8 text-center">
             <div className="text-4xl mb-3">💸</div>
-            <p className="text-slate-600 mb-2">Nenhum lançamento hoje</p>
+            <p className="text-slate-600 mb-2">
+              Nenhum lançamento {selectedDate === getSaoPauloDate() ? "hoje" : "nesta data"}
+            </p>
             <p className="text-sm text-slate-500">Clique em Adicionar para começar</p>
           </GlassCard>
         ) : (
