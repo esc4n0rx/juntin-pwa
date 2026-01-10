@@ -14,6 +14,8 @@ import { Camera, UserCircle2, Mail } from "lucide-react"
 import { useRef, useEffect, useState } from "react"
 import Image from "next/image"
 import { CategoryManagerModal } from "@/components/category-manager-modal"
+import { ManageAccounts } from "@/components/manage-accounts"
+import { ManageRecurring } from "@/components/manage-recurring"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -527,6 +529,14 @@ export default function ProfilePage() {
               Gerenciar Categorias
             </Button>
           </CategoryManagerModal>
+        </GlassCard>
+
+        <GlassCard className="p-6 mb-6">
+          <ManageAccounts />
+        </GlassCard>
+
+        <GlassCard className="p-6 mb-6">
+          <ManageRecurring />
         </GlassCard>
 
         <GlassCard className="p-6 mb-6">

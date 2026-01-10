@@ -96,7 +96,8 @@ export async function POST(request: Request) {
             .eq('id', userId)
             .single();
 
-        if (profile?.setup && profile?.mode) {
+        // Se setup está completo, vai para /app
+        if (profile?.setup === true) {
             if (profile.mode === 'couple' && profile.couple_id) {
                 const { data: partner } = await adminDb
                     .from('profiles')
@@ -111,6 +112,7 @@ export async function POST(request: Request) {
             }
             return NextResponse.json({ success: true, redirect: '/app' });
         } else {
+            // Se setup não está completo, vai para select-mode
             return NextResponse.json({ success: true, redirect: '/select-mode' });
         }
 

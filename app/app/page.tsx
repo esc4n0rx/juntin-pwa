@@ -4,12 +4,21 @@ import { useAppStore } from "@/lib/store"
 import { GlassCard } from "@/components/glass-card"
 import { motion } from "framer-motion"
 import { useState, useEffect } from "react"
+import { MigrationModal } from "@/components/migration-modal"
 
 type Category = {
   id: string
   name: string
   icon: string
   color?: string
+}
+
+type Account = {
+  id: string
+  name: string
+  icon: string
+  type: string
+  current_balance: number
 }
 
 type Transaction = {
@@ -19,6 +28,11 @@ type Transaction = {
   date: string
   description?: string
   category?: {
+    id: string
+    name: string
+    icon: string
+  }
+  account?: {
     id: string
     name: string
     icon: string
@@ -41,8 +55,11 @@ export default function HomePage() {
   const setPartnerAvatar = useAppStore((state) => state.setPartnerAvatar)
 
   const [categories, setCategories] = useState<Category[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [showMigrationModal, setShowMigrationModal] = useState(false)
+  const [needsMigration, setNeedsMigration] = useState(false)
 
   // Fetch Data on Mount
   useEffect(() => {
@@ -74,7 +91,29 @@ export default function HomePage() {
           }
         }
 
-        // 2. Buscar categorias
+        // 2. Verificar status de migração
+        const migrationRes = await fetch('/api/accounts/migrate')
+        if (migrationRes.ok) {
+          const migrationData = await migrationRes.json()
+          if (migrationData.needsMigration) {
+            setNeedsMigration(true)
+            setShowMigrationModal(true)
+          }
+        }
+
+        // 3. Processar contas recorrentes (auto-lançamento)
+        await fetch('/api/recurring/process', { method: 'POST' })
+
+        // 4. Buscar contas
+        const accountsRes = await fetch('/api/accounts')
+        if (accountsRes.ok) {
+          const accountsData = await accountsRes.json()
+          if (accountsData.accounts) {
+            setAccounts(accountsData.accounts)
+          }
+        }
+
+        // 5. Buscar categorias
         const catRes = await fetch('/api/categories')
         if (catRes.ok) {
           const catData = await catRes.json()
@@ -83,7 +122,7 @@ export default function HomePage() {
           }
         }
 
-        // 3. Buscar TODAS as transações (sem filtro de data para calcular saldo geral)
+        // 6. Buscar transações recentes (últimas 5)
         const transRes = await fetch('/api/transactions')
         if (transRes.ok) {
           const transData = await transRes.json()
@@ -102,15 +141,29 @@ export default function HomePage() {
     fetchData()
   }, [])
 
-  // Calcular estatísticas
+  // Calcular saldo geral (soma de todas as contas)
+  const totalBalance = accounts.reduce((sum, account) => sum + Number(account.current_balance), 0)
+
+  // Calcular estatísticas baseadas em todas as transações
   const totalExpenses = transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0)
   const totalIncome = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
-  const balance = totalIncome - totalExpenses
 
   const recentTransactions = transactions.slice(0, 5)
 
+  const handleMigrationComplete = () => {
+    setNeedsMigration(false)
+    // Recarregar dados
+    window.location.reload()
+  }
+
   return (
     <div className="p-6 pb-8">
+      <MigrationModal
+        isOpen={showMigrationModal}
+        onClose={() => setShowMigrationModal(false)}
+        onMigrationComplete={handleMigrationComplete}
+      />
+
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="mb-8">
           <h2 className={`text-sm mb-1 ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>Olá,</h2>
@@ -140,14 +193,42 @@ export default function HomePage() {
               <h2 className={`text-4xl font-black mb-1 ${
                 theme === "dark" ? "text-white" : theme === "bw" ? "text-slate-900" : "text-slate-800"
               }`}>
-                R$ {balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                R$ {totalBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </h2>
               <p className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
-                {balance >= 0 ? "Você está no azul!" : "Atenção aos gastos"}
+                {accounts.length > 1 ? `${accounts.length} contas` : accounts.length === 1 ? '1 conta' : 'Nenhuma conta'}
               </p>
             </>
           )}
         </GlassCard>
+
+        {/* Cards de Contas */}
+        {!loading && accounts.length > 0 && (
+          <div className="mb-6">
+            <h3 className={`text-sm font-bold mb-3 ${theme === "dark" ? "text-white" : "text-slate-800"}`}>
+              Minhas Contas
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {accounts.map((account) => (
+                <GlassCard key={account.id} className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">{account.icon}</span>
+                    <span className={`text-xs font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                      {account.name}
+                    </span>
+                  </div>
+                  <p className={`text-lg font-bold ${
+                    account.current_balance >= 0
+                      ? theme === "dark" ? "text-emerald-400" : theme === "bw" ? "text-slate-900" : "text-emerald-600"
+                      : theme === "dark" ? "text-pink-400" : theme === "bw" ? "text-slate-900" : "text-pink-600"
+                  }`}>
+                    R$ {Number(account.current_balance).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </p>
+                </GlassCard>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4 mb-6">
           <GlassCard variant="green" className="p-4">
@@ -298,6 +379,9 @@ export default function HomePage() {
                       <div>
                         <h4 className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>{transaction.category?.name || "Sem categoria"}</h4>
                         <p className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+                          {transaction.account?.name && (
+                            <span>{transaction.account.icon} {transaction.account.name} • </span>
+                          )}
                           {new Date(transaction.date).toLocaleDateString("pt-BR")}
                         </p>
                       </div>

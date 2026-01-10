@@ -18,6 +18,14 @@ type Category = {
   type?: string
 }
 
+type Account = {
+  id: string
+  name: string
+  icon: string
+  type: string
+  current_balance: number
+}
+
 type Transaction = {
   id: string
   type: "income" | "expense"
@@ -29,6 +37,11 @@ type Transaction = {
     name: string
     icon: string
     color?: string
+  }
+  account?: {
+    id: string
+    name: string
+    icon: string
   }
   user?: {
     id: string
@@ -50,14 +63,20 @@ export default function ExpensesPage() {
   const setPartnerAvatar = useAppStore((state) => state.setPartnerAvatar)
 
   const [categories, setCategories] = useState<Category[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [type, setType] = useState<"income" | "expense">("expense")
   const [selectedCategory, setSelectedCategory] = useState("")
+  const [selectedAccount, setSelectedAccount] = useState("")
   const [amount, setAmount] = useState("")
   const [date, setDate] = useState(getSaoPauloDate)
   const [description, setDescription] = useState("")
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [frequency, setFrequency] = useState("monthly")
+  const [dayOfMonth, setDayOfMonth] = useState("1")
+  const [dayOfWeek, setDayOfWeek] = useState("0")
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [selectedDate, setSelectedDate] = useState(getSaoPauloDate)
   const [showDatePicker, setShowDatePicker] = useState(false)
@@ -105,6 +124,18 @@ export default function ExpensesPage() {
     try {
       setLoading(true)
 
+      // Buscar contas
+      const accountsRes = await fetch('/api/accounts')
+      const accountsData = await accountsRes.json()
+
+      if (accountsRes.ok && accountsData.accounts) {
+        setAccounts(accountsData.accounts)
+        // Se não tem conta selecionada e há contas disponíveis, selecionar a primeira
+        if (!selectedAccount && accountsData.accounts.length > 0) {
+          setSelectedAccount(accountsData.accounts[0].id)
+        }
+      }
+
       // Buscar categorias
       const categoriesRes = await fetch('/api/categories')
       const categoriesData = await categoriesRes.json()
@@ -132,9 +163,11 @@ export default function ExpensesPage() {
     setEditingTransaction(transaction)
     setType(transaction.type)
     setSelectedCategory(transaction.category?.id || "")
+    setSelectedAccount(transaction.account?.id || "")
     setAmount(transaction.amount.toString().replace(".", ","))
     setDate(transaction.date)
     setDescription(transaction.description || "")
+    setIsRecurring(false)
     setShowForm(true)
   }
 
@@ -167,6 +200,11 @@ export default function ExpensesPage() {
       return
     }
 
+    if (!selectedAccount) {
+      toast.error("Selecione uma conta")
+      return
+    }
+
     // Converter vírgula para ponto antes de validar
     const normalizedAmount = amount.replace(",", ".")
     if (!normalizedAmount || Number.parseFloat(normalizedAmount) <= 0) {
@@ -175,39 +213,74 @@ export default function ExpensesPage() {
     }
 
     try {
-      const url = editingTransaction
-        ? `/api/transactions/${editingTransaction.id}`
-        : '/api/transactions'
+      // Se é recorrente, criar conta recorrente em vez de transação
+      if (isRecurring && !editingTransaction) {
+        const recurringResponse = await fetch('/api/recurring', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            description: description || categories.find(c => c.id === selectedCategory)?.name || "Conta recorrente",
+            amount: Number.parseFloat(normalizedAmount),
+            type,
+            frequency,
+            day_of_month: frequency === 'monthly' ? Number(dayOfMonth) : null,
+            day_of_week: (frequency === 'weekly' || frequency === 'biweekly') ? Number(dayOfWeek) : null,
+            start_date: date,
+            category_id: selectedCategory,
+            account_id: selectedAccount,
+          }),
+        })
 
-      const response = await fetch(url, {
-        method: editingTransaction ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type,
-          category_id: selectedCategory,
-          amount: Number.parseFloat(normalizedAmount),
-          date,
-          description: description || null,
-        }),
-      })
+        const recurringData = await recurringResponse.json()
 
-      const data = await response.json()
+        if (!recurringResponse.ok) {
+          throw new Error(recurringData.error || 'Erro ao criar conta recorrente')
+        }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao salvar lançamento')
+        toast.success('Conta recorrente criada!')
+      } else {
+        // Lançamento único
+        const url = editingTransaction
+          ? `/api/transactions/${editingTransaction.id}`
+          : '/api/transactions'
+
+        const response = await fetch(url, {
+          method: editingTransaction ? 'PUT' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type,
+            category_id: selectedCategory,
+            amount: Number.parseFloat(normalizedAmount),
+            date,
+            description: description || null,
+            account_id: selectedAccount,
+          }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Erro ao salvar lançamento')
+        }
+
+        toast.success(editingTransaction
+          ? 'Lançamento atualizado!'
+          : `${type === "income" ? "Receita" : "Despesa"} adicionada!`)
       }
-
-      toast.success(editingTransaction
-        ? 'Lançamento atualizado!'
-        : `${type === "income" ? "Receita" : "Despesa"} adicionada!`)
 
       // Reset form
       setSelectedCategory("")
       setAmount("")
       setDate(getSaoPauloDate())
       setDescription("")
+      setIsRecurring(false)
+      setFrequency("monthly")
+      setDayOfMonth("1")
+      setDayOfWeek("0")
       setShowForm(false)
       setEditingTransaction(null)
 
@@ -388,7 +461,7 @@ export default function ExpensesPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <Label className="mb-2 block">Categoria</Label>
+                    <Label className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>Categoria</Label>
                     <div className="grid grid-cols-3 gap-2">
                       {Array.from(new Map(categories.map(cat => [cat.id, cat])).values()).map((category) => (
                         <button
@@ -414,7 +487,111 @@ export default function ExpensesPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="amount" className="mb-2 block">
+                    <Label className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>Conta</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {accounts.map((account) => (
+                        <button
+                          key={account.id}
+                          onClick={() => setSelectedAccount(account.id)}
+                          className={`p-3 rounded-xl transition-all ${
+                            selectedAccount === account.id
+                              ? theme === "dark"
+                                ? "bg-blue-900/50 ring-2 ring-blue-500"
+                                : theme === "bw"
+                                ? "bg-slate-200 ring-2 ring-slate-800"
+                                : "bg-blue-100 ring-2 ring-blue-400"
+                              : theme === "dark"
+                              ? "bg-slate-700/50"
+                              : "bg-slate-200/50"
+                          }`}
+                        >
+                          <div className="text-xl mb-1">{account.icon}</div>
+                          <p className={`text-xs font-medium truncate ${theme === "dark" ? "text-slate-200" : "text-slate-700"}`}>{account.name}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {!editingTransaction && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <input
+                          type="checkbox"
+                          id="isRecurring"
+                          checked={isRecurring}
+                          onChange={(e) => setIsRecurring(e.target.checked)}
+                          className="w-4 h-4 rounded"
+                        />
+                        <Label htmlFor="isRecurring" className={`cursor-pointer ${theme === "dark" ? "text-white" : ""}`}>
+                          Tornar recorrente
+                        </Label>
+                      </div>
+                      {isRecurring && (
+                        <div className={`space-y-3 mt-3 p-3 rounded-xl ${
+                          theme === "dark" ? "bg-blue-900/20" : "bg-blue-50/50"
+                        }`}>
+                          <div>
+                            <Label className={`mb-2 block text-sm ${theme === "dark" ? "text-white" : ""}`}>Frequência</Label>
+                            <select
+                              value={frequency}
+                              onChange={(e) => setFrequency(e.target.value)}
+                              className={`w-full h-10 rounded-xl border px-3 text-sm ${
+                                theme === "dark"
+                                  ? "bg-slate-700 border-slate-600 text-white"
+                                  : "bg-white border-slate-200"
+                              }`}
+                            >
+                              <option value="daily">Diária</option>
+                              <option value="weekly">Semanal</option>
+                              <option value="biweekly">Quinzenal</option>
+                              <option value="monthly">Mensal</option>
+                              <option value="yearly">Anual</option>
+                            </select>
+                          </div>
+                          {frequency === 'monthly' && (
+                            <div>
+                              <Label className={`mb-2 block text-sm ${theme === "dark" ? "text-white" : ""}`}>Dia do mês</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                max="31"
+                                value={dayOfMonth}
+                                onChange={(e) => setDayOfMonth(e.target.value)}
+                                className={`h-10 rounded-xl text-sm ${
+                                  theme === "dark" ? "bg-slate-700 border-slate-600 text-white" : ""
+                                }`}
+                              />
+                            </div>
+                          )}
+                          {(frequency === 'weekly' || frequency === 'biweekly') && (
+                            <div>
+                              <Label className={`mb-2 block text-sm ${theme === "dark" ? "text-white" : ""}`}>Dia da semana</Label>
+                              <select
+                                value={dayOfWeek}
+                                onChange={(e) => setDayOfWeek(e.target.value)}
+                                className={`w-full h-10 rounded-xl border px-3 text-sm ${
+                                  theme === "dark"
+                                    ? "bg-slate-700 border-slate-600 text-white"
+                                    : "bg-white border-slate-200"
+                                }`}
+                              >
+                                <option value="0">Domingo</option>
+                                <option value="1">Segunda</option>
+                                <option value="2">Terça</option>
+                                <option value="3">Quarta</option>
+                                <option value="4">Quinta</option>
+                                <option value="5">Sexta</option>
+                                <option value="6">Sábado</option>
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div>
+                    <Label htmlFor="amount" className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>
                       Valor
                     </Label>
                     <Input
@@ -435,12 +612,14 @@ export default function ExpensesPage() {
                           setAmount(sanitized)
                         }
                       }}
-                      className="h-12 rounded-xl text-lg"
+                      className={`h-12 rounded-xl text-lg ${
+                        theme === "dark" ? "bg-slate-700 border-slate-600 text-white" : ""
+                      }`}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="date" className="mb-2 block">
+                    <Label htmlFor="date" className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>
                       Data
                     </Label>
                     <Input
@@ -448,12 +627,14 @@ export default function ExpensesPage() {
                       type="date"
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
-                      className="h-12 rounded-xl"
+                      className={`h-12 rounded-xl ${
+                        theme === "dark" ? "bg-slate-700 border-slate-600 text-white" : ""
+                      }`}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="description" className="mb-2 block">
+                    <Label htmlFor="description" className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>
                       Observação (opcional)
                     </Label>
                     <Textarea
@@ -461,7 +642,9 @@ export default function ExpensesPage() {
                       placeholder="Adicione uma observação..."
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="rounded-xl resize-none"
+                      className={`rounded-xl resize-none ${
+                        theme === "dark" ? "bg-slate-700 border-slate-600 text-white placeholder:text-slate-400" : ""
+                      }`}
                       rows={3}
                     />
                   </div>

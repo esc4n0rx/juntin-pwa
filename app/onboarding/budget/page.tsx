@@ -24,11 +24,11 @@ export default function BudgetPage() {
         updateCategory(id, { budget: Number.parseFloat(value) })
       }
     })
-    router.push("/onboarding/income")
+    router.push("/onboarding/accounts")
   }
 
   const handleSkip = () => {
-    router.push("/onboarding/income")
+    router.push("/onboarding/accounts")
   }
 
   return (

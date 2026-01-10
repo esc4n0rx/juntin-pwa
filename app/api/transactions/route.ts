@@ -35,7 +35,8 @@ export async function GET(request: Request) {
             .select(`
                 *,
                 category:categories(id, name, icon, color, type),
-                user:profiles(id, full_name, avatar_url)
+                user:profiles(id, full_name, avatar_url),
+                account:accounts(id, name, icon, type)
             `)
             .eq('couple_id', profile.couple_id)
             .order('date', { ascending: false })
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
 
         const adminDb = createAdminClient();
 
-        const { type, category_id, amount, date, description } = await request.json();
+        const { type, category_id, amount, date, description, account_id } = await request.json();
 
         // Validações
         if (!type || !['income', 'expense'].includes(type)) {
@@ -82,6 +83,9 @@ export async function POST(request: Request) {
         }
         if (!date) {
             return NextResponse.json({ error: 'Data obrigatória' }, { status: 400 });
+        }
+        if (!account_id) {
+            return NextResponse.json({ error: 'Conta bancária obrigatória' }, { status: 400 });
         }
 
         // Get couple_id and mode
@@ -107,6 +111,19 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 });
         }
 
+        // Verificar se a conta bancária pertence ao casal
+        const { data: account } = await adminDb
+            .from('accounts')
+            .select('id, current_balance, is_active')
+            .eq('id', account_id)
+            .eq('couple_id', profile.couple_id)
+            .eq('is_active', true)
+            .single();
+
+        if (!account) {
+            return NextResponse.json({ error: 'Conta bancária não encontrada' }, { status: 404 });
+        }
+
         // Criar transação
         // Se mode === 'solo', user_id é sempre o próprio usuário
         // Se mode === 'couple', user_id indica quem está lançando
@@ -119,16 +136,28 @@ export async function POST(request: Request) {
                 date,
                 description: description || null,
                 couple_id: profile.couple_id,
-                user_id: payload.userId
+                user_id: payload.userId,
+                account_id: account_id
             })
             .select(`
                 *,
                 category:categories(id, name, icon, color, type),
-                user:profiles(id, full_name, avatar_url)
+                user:profiles(id, full_name, avatar_url),
+                account:accounts(id, name, icon, type)
             `)
             .single();
 
         if (error) throw error;
+
+        // Atualizar saldo da conta
+        const newBalance = type === 'income'
+            ? account.current_balance + amount
+            : account.current_balance - amount;
+
+        await adminDb
+            .from('accounts')
+            .update({ current_balance: newBalance })
+            .eq('id', account_id);
 
         return NextResponse.json({ transaction });
 
