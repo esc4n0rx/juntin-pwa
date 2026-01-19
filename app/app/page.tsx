@@ -23,7 +23,7 @@ type Account = {
 
 type Transaction = {
   id: string
-  type: "income" | "expense"
+  type: "income" | "expense" | "transfer"
   amount: number
   date: string
   description?: string
@@ -36,6 +36,18 @@ type Transaction = {
     id: string
     name: string
     icon: string
+  }
+  transfer?: {
+    fromAccount?: {
+      id: string
+      name: string
+      icon: string
+    }
+    toAccount?: {
+      id: string
+      name: string
+      icon: string
+    }
   }
   user?: {
     id: string
@@ -367,6 +379,12 @@ export default function HomePage() {
                               : theme === "bw"
                               ? "bg-slate-200"
                               : "bg-emerald-100"
+                            : transaction.type === "transfer"
+                            ? theme === "dark"
+                              ? "bg-blue-900/50"
+                              : theme === "bw"
+                              ? "bg-slate-200"
+                              : "bg-blue-100"
                             : theme === "dark"
                               ? "bg-pink-900/50"
                               : theme === "bw"
@@ -374,15 +392,33 @@ export default function HomePage() {
                               : "bg-pink-100"
                         }`}
                       >
-                        {transaction.category?.icon || "💰"}
+                        {transaction.type === "transfer"
+                          ? "🔁"
+                          : transaction.category?.icon || "💰"}
                       </div>
                       <div>
-                        <h4 className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>{transaction.category?.name || "Sem categoria"}</h4>
+                        <h4 className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>
+                          {transaction.type === "transfer"
+                            ? "Transferência"
+                            : transaction.category?.name || "Sem categoria"}
+                        </h4>
                         <p className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
-                          {transaction.account?.name && (
-                            <span>{transaction.account.icon} {transaction.account.name} • </span>
+                          {transaction.type === "transfer" ? (
+                            <>
+                              {transaction.transfer?.fromAccount?.icon}{" "}
+                              {transaction.transfer?.fromAccount?.name} →{" "}
+                              {transaction.transfer?.toAccount?.icon}{" "}
+                              {transaction.transfer?.toAccount?.name} •{" "}
+                              {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                            </>
+                          ) : (
+                            <>
+                              {transaction.account?.name && (
+                                <span>{transaction.account.icon} {transaction.account.name} • </span>
+                              )}
+                              {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                            </>
                           )}
-                          {new Date(transaction.date).toLocaleDateString("pt-BR")}
                         </p>
                       </div>
                     </div>
@@ -395,6 +431,12 @@ export default function HomePage() {
                               : theme === "bw"
                               ? "text-slate-900"
                               : "text-emerald-600"
+                            : transaction.type === "transfer"
+                            ? theme === "dark"
+                              ? "text-blue-400"
+                              : theme === "bw"
+                              ? "text-slate-900"
+                              : "text-blue-600"
                             : theme === "dark"
                               ? "text-pink-400"
                               : theme === "bw"
@@ -402,7 +444,12 @@ export default function HomePage() {
                               : "text-pink-600"
                         }`}
                       >
-                        {transaction.type === "income" ? "+" : "-"} R${" "}
+                        {transaction.type === "transfer"
+                          ? "↔"
+                          : transaction.type === "income"
+                          ? "+"
+                          : "-"}{" "}
+                        R${" "}
                         {transaction.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </p>
                       {transaction.description && <p className={`text-xs mt-1 ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>{transaction.description}</p>}
