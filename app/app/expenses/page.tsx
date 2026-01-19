@@ -28,7 +28,7 @@ type Account = {
 
 type Transaction = {
   id: string
-  type: "income" | "expense"
+  type: "income" | "expense" | "transfer"
   amount: number
   date: string
   description?: string
@@ -42,6 +42,18 @@ type Transaction = {
     id: string
     name: string
     icon: string
+  }
+  transfer?: {
+    fromAccount?: {
+      id: string
+      name: string
+      icon: string
+    }
+    toAccount?: {
+      id: string
+      name: string
+      icon: string
+    }
   }
   user?: {
     id: string
@@ -67,9 +79,11 @@ export default function ExpensesPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [type, setType] = useState<"income" | "expense">("expense")
+  const [type, setType] = useState<"income" | "expense" | "transfer">("expense")
   const [selectedCategory, setSelectedCategory] = useState("")
   const [selectedAccount, setSelectedAccount] = useState("")
+  const [transferFromAccount, setTransferFromAccount] = useState("")
+  const [transferToAccount, setTransferToAccount] = useState("")
   const [amount, setAmount] = useState("")
   const [date, setDate] = useState(getSaoPauloDate)
   const [description, setDescription] = useState("")
@@ -134,6 +148,12 @@ export default function ExpensesPage() {
         if (!selectedAccount && accountsData.accounts.length > 0) {
           setSelectedAccount(accountsData.accounts[0].id)
         }
+        if (!transferFromAccount && accountsData.accounts.length > 0) {
+          setTransferFromAccount(accountsData.accounts[0].id)
+        }
+        if (!transferToAccount && accountsData.accounts.length > 1) {
+          setTransferToAccount(accountsData.accounts[1].id)
+        }
       }
 
       // Buscar categorias
@@ -162,8 +182,15 @@ export default function ExpensesPage() {
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction)
     setType(transaction.type)
-    setSelectedCategory(transaction.category?.id || "")
-    setSelectedAccount(transaction.account?.id || "")
+    if (transaction.type === "transfer") {
+      setSelectedCategory("")
+      setSelectedAccount("")
+      setTransferFromAccount(transaction.transfer?.fromAccount?.id || "")
+      setTransferToAccount(transaction.transfer?.toAccount?.id || "")
+    } else {
+      setSelectedCategory(transaction.category?.id || "")
+      setSelectedAccount(transaction.account?.id || "")
+    }
     setAmount(transaction.amount.toString().replace(".", ","))
     setDate(transaction.date)
     setDescription(transaction.description || "")
@@ -171,22 +198,31 @@ export default function ExpensesPage() {
     setShowForm(true)
   }
 
-  const handleDelete = async (transactionId: string) => {
+  const handleDelete = async (transaction: Transaction) => {
     if (!confirm('Deseja realmente excluir este lançamento?')) {
       return
     }
 
     try {
-      const response = await fetch(`/api/transactions/${transactionId}`, {
-        method: 'DELETE',
-      })
+      const response = await fetch(
+        transaction.type === "transfer"
+          ? `/api/transfers/${transaction.id}`
+          : `/api/transactions/${transaction.id}`,
+        {
+          method: "DELETE",
+        }
+      )
 
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error || 'Erro ao excluir lançamento')
       }
 
-      toast.success('Lançamento excluído!')
+      toast.success(
+        transaction.type === "transfer"
+          ? "Transferência excluída!"
+          : "Lançamento excluído!"
+      )
       fetchData()
     } catch (error: any) {
       console.error('Erro ao excluir:', error)
@@ -195,14 +231,29 @@ export default function ExpensesPage() {
   }
 
   const handleSubmit = async () => {
-    if (!selectedCategory) {
+    if (type !== "transfer" && !selectedCategory) {
       toast.error("Selecione uma categoria")
       return
     }
 
-    if (!selectedAccount) {
+    if (type !== "transfer" && !selectedAccount) {
       toast.error("Selecione uma conta")
       return
+    }
+
+    if (type === "transfer") {
+      if (accounts.length < 2) {
+        toast.error("Cadastre pelo menos duas contas para transferir")
+        return
+      }
+      if (!transferFromAccount || !transferToAccount) {
+        toast.error("Selecione as contas de origem e destino")
+        return
+      }
+      if (transferFromAccount === transferToAccount) {
+        toast.error("Selecione contas diferentes para transferir")
+        return
+      }
     }
 
     // Converter vírgula para ponto antes de validar
@@ -214,7 +265,7 @@ export default function ExpensesPage() {
 
     try {
       // Se é recorrente, criar conta recorrente em vez de transação
-      if (isRecurring && !editingTransaction) {
+      if (type !== "transfer" && isRecurring && !editingTransaction) {
         const recurringResponse = await fetch('/api/recurring', {
           method: 'POST',
           headers: {
@@ -240,6 +291,34 @@ export default function ExpensesPage() {
         }
 
         toast.success('Conta recorrente criada!')
+      } else if (type === "transfer") {
+        const url = editingTransaction
+          ? `/api/transfers/${editingTransaction.id}`
+          : "/api/transfers"
+
+        const response = await fetch(url, {
+          method: editingTransaction ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: Number.parseFloat(normalizedAmount),
+            date,
+            description: description || null,
+            from_account_id: transferFromAccount,
+            to_account_id: transferToAccount,
+          }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || "Erro ao salvar transferência")
+        }
+
+        toast.success(
+          editingTransaction ? "Transferência atualizada!" : "Transferência realizada!"
+        )
       } else {
         // Lançamento único
         const url = editingTransaction
@@ -267,13 +346,16 @@ export default function ExpensesPage() {
           throw new Error(data.error || 'Erro ao salvar lançamento')
         }
 
-        toast.success(editingTransaction
-          ? 'Lançamento atualizado!'
-          : `${type === "income" ? "Receita" : "Despesa"} adicionada!`)
+        toast.success(
+          editingTransaction
+            ? "Lançamento atualizado!"
+            : `${type === "income" ? "Receita" : "Despesa"} adicionada!`
+        )
       }
 
       // Reset form
       setSelectedCategory("")
+      setSelectedAccount("")
       setAmount("")
       setDate(getSaoPauloDate())
       setDescription("")
@@ -457,62 +539,145 @@ export default function ExpensesPage() {
                   >
                     Receita
                   </Button>
+                  <Button
+                    onClick={() => {
+                      setType("transfer")
+                      setIsRecurring(false)
+                    }}
+                    variant={type === "transfer" ? "default" : "outline"}
+                    className={`flex-1 h-12 rounded-xl ${
+                      type === "transfer"
+                        ? theme === "dark"
+                          ? "bg-blue-600 hover:bg-blue-700"
+                          : theme === "bw"
+                          ? "bg-slate-800"
+                          : "bg-blue-500"
+                        : theme === "dark"
+                        ? "bg-transparent border-slate-600 text-slate-300"
+                        : "bg-transparent"
+                    }`}
+                    disabled={accounts.length < 2}
+                    title={
+                      accounts.length < 2
+                        ? "Cadastre pelo menos duas contas para transferir"
+                        : "Transferência"
+                    }
+                  >
+                    Transferência
+                  </Button>
                 </div>
 
                 <div className="space-y-4">
-                  <div>
-                    <Label className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>Categoria</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {Array.from(new Map(categories.map(cat => [cat.id, cat])).values()).map((category) => (
-                        <button
-                          key={category.id}
-                          onClick={() => setSelectedCategory(category.id)}
-                          className={`p-3 rounded-xl transition-all ${
-                            selectedCategory === category.id
-                              ? theme === "dark"
-                                ? "bg-blue-900/50 ring-2 ring-blue-500"
-                                : theme === "bw"
-                                ? "bg-slate-200 ring-2 ring-slate-800"
-                                : "bg-blue-100 ring-2 ring-blue-400"
-                              : theme === "dark"
-                              ? "bg-slate-700/50"
-                              : "bg-slate-200/50"
-                          }`}
-                        >
-                          <div className="text-2xl mb-1">{category.icon}</div>
-                          <p className={`text-xs font-medium truncate ${theme === "dark" ? "text-slate-200" : "text-slate-700"}`}>{category.name}</p>
-                        </button>
-                      ))}
+                  {type !== "transfer" && (
+                    <div>
+                      <Label className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>Categoria</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {Array.from(new Map(categories.map(cat => [cat.id, cat])).values()).map((category) => (
+                          <button
+                            key={category.id}
+                            onClick={() => setSelectedCategory(category.id)}
+                            className={`p-3 rounded-xl transition-all ${
+                              selectedCategory === category.id
+                                ? theme === "dark"
+                                  ? "bg-blue-900/50 ring-2 ring-blue-500"
+                                  : theme === "bw"
+                                  ? "bg-slate-200 ring-2 ring-slate-800"
+                                  : "bg-blue-100 ring-2 ring-blue-400"
+                                : theme === "dark"
+                                ? "bg-slate-700/50"
+                                : "bg-slate-200/50"
+                            }`}
+                          >
+                            <div className="text-2xl mb-1">{category.icon}</div>
+                            <p className={`text-xs font-medium truncate ${theme === "dark" ? "text-slate-200" : "text-slate-700"}`}>{category.name}</p>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div>
-                    <Label className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>Conta</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {accounts.map((account) => (
-                        <button
-                          key={account.id}
-                          onClick={() => setSelectedAccount(account.id)}
-                          className={`p-3 rounded-xl transition-all ${
-                            selectedAccount === account.id
-                              ? theme === "dark"
-                                ? "bg-blue-900/50 ring-2 ring-blue-500"
-                                : theme === "bw"
-                                ? "bg-slate-200 ring-2 ring-slate-800"
-                                : "bg-blue-100 ring-2 ring-blue-400"
-                              : theme === "dark"
-                              ? "bg-slate-700/50"
-                              : "bg-slate-200/50"
-                          }`}
-                        >
-                          <div className="text-xl mb-1">{account.icon}</div>
-                          <p className={`text-xs font-medium truncate ${theme === "dark" ? "text-slate-200" : "text-slate-700"}`}>{account.name}</p>
-                        </button>
-                      ))}
+                  {type !== "transfer" ? (
+                    <div>
+                      <Label className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>Conta</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {accounts.map((account) => (
+                          <button
+                            key={account.id}
+                            onClick={() => setSelectedAccount(account.id)}
+                            className={`p-3 rounded-xl transition-all ${
+                              selectedAccount === account.id
+                                ? theme === "dark"
+                                  ? "bg-blue-900/50 ring-2 ring-blue-500"
+                                  : theme === "bw"
+                                  ? "bg-slate-200 ring-2 ring-slate-800"
+                                  : "bg-blue-100 ring-2 ring-blue-400"
+                                : theme === "dark"
+                                ? "bg-slate-700/50"
+                                : "bg-slate-200/50"
+                            }`}
+                          >
+                            <div className="text-xl mb-1">{account.icon}</div>
+                            <p className={`text-xs font-medium truncate ${theme === "dark" ? "text-slate-200" : "text-slate-700"}`}>{account.name}</p>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>Conta de origem</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {accounts.map((account) => (
+                            <button
+                              key={account.id}
+                              onClick={() => setTransferFromAccount(account.id)}
+                              className={`p-3 rounded-xl transition-all ${
+                                transferFromAccount === account.id
+                                  ? theme === "dark"
+                                    ? "bg-blue-900/50 ring-2 ring-blue-500"
+                                    : theme === "bw"
+                                    ? "bg-slate-200 ring-2 ring-slate-800"
+                                    : "bg-blue-100 ring-2 ring-blue-400"
+                                  : theme === "dark"
+                                  ? "bg-slate-700/50"
+                                  : "bg-slate-200/50"
+                              }`}
+                            >
+                              <div className="text-xl mb-1">{account.icon}</div>
+                              <p className={`text-xs font-medium truncate ${theme === "dark" ? "text-slate-200" : "text-slate-700"}`}>{account.name}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className={`mb-2 block ${theme === "dark" ? "text-white" : ""}`}>Conta destino</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {accounts.map((account) => (
+                            <button
+                              key={account.id}
+                              onClick={() => setTransferToAccount(account.id)}
+                              className={`p-3 rounded-xl transition-all ${
+                                transferToAccount === account.id
+                                  ? theme === "dark"
+                                    ? "bg-blue-900/50 ring-2 ring-blue-500"
+                                    : theme === "bw"
+                                    ? "bg-slate-200 ring-2 ring-slate-800"
+                                    : "bg-blue-100 ring-2 ring-blue-400"
+                                  : theme === "dark"
+                                  ? "bg-slate-700/50"
+                                  : "bg-slate-200/50"
+                              }`}
+                            >
+                              <div className="text-xl mb-1">{account.icon}</div>
+                              <p className={`text-xs font-medium truncate ${theme === "dark" ? "text-slate-200" : "text-slate-700"}`}>{account.name}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                  {!editingTransaction && (
+                  {!editingTransaction && type !== "transfer" && (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <input
@@ -722,7 +887,7 @@ export default function ExpensesPage() {
                       <span className="text-sm">✏️</span>
                     </button>
                     <button
-                      onClick={() => handleDelete(transaction.id)}
+                      onClick={() => handleDelete(transaction)}
                       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors select-none ${
                         theme === "dark"
                           ? "bg-red-900/50 hover:bg-red-800/50"
@@ -745,6 +910,12 @@ export default function ExpensesPage() {
                               : theme === "bw"
                               ? "bg-slate-200"
                               : "bg-emerald-100"
+                            : transaction.type === "transfer"
+                            ? theme === "dark"
+                              ? "bg-blue-900/50"
+                              : theme === "bw"
+                              ? "bg-slate-200"
+                              : "bg-blue-100"
                             : theme === "dark"
                               ? "bg-pink-900/50"
                               : theme === "bw"
@@ -752,12 +923,28 @@ export default function ExpensesPage() {
                               : "bg-pink-100"
                         }`}
                       >
-                        {transaction.category?.icon || "💰"}
+                        {transaction.type === "transfer"
+                          ? "🔁"
+                          : transaction.category?.icon || "💰"}
                       </div>
                       <div>
-                        <h4 className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>{transaction.category?.name || "Sem categoria"}</h4>
+                        <h4 className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>
+                          {transaction.type === "transfer"
+                            ? "Transferência"
+                            : transaction.category?.name || "Sem categoria"}
+                        </h4>
                         <p className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
-                          {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                          {transaction.type === "transfer" ? (
+                            <>
+                              {transaction.transfer?.fromAccount?.icon}{" "}
+                              {transaction.transfer?.fromAccount?.name} →{" "}
+                              {transaction.transfer?.toAccount?.icon}{" "}
+                              {transaction.transfer?.toAccount?.name} •{" "}
+                              {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                            </>
+                          ) : (
+                            new Date(transaction.date).toLocaleDateString("pt-BR")
+                          )}
                         </p>
                         {transaction.description && (
                           <p className={`text-xs mt-1 ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>{transaction.description}</p>
@@ -772,6 +959,12 @@ export default function ExpensesPage() {
                             : theme === "bw"
                             ? "text-slate-900"
                             : "text-emerald-600"
+                          : transaction.type === "transfer"
+                          ? theme === "dark"
+                            ? "text-blue-400"
+                            : theme === "bw"
+                            ? "text-slate-900"
+                            : "text-blue-600"
                           : theme === "dark"
                             ? "text-pink-400"
                             : theme === "bw"
@@ -779,7 +972,12 @@ export default function ExpensesPage() {
                             : "text-pink-600"
                       }`}
                     >
-                      {transaction.type === "income" ? "+" : "-"} R${" "}
+                      {transaction.type === "transfer"
+                        ? "↔"
+                        : transaction.type === "income"
+                        ? "+"
+                        : "-"}{" "}
+                      R${" "}
                       {transaction.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </p>
                   </div>

@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyToken } from "@/lib/auth-server";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { parseTransferDescription } from "@/lib/transfers";
 
 export async function GET(request: Request) {
     try {
@@ -51,7 +52,66 @@ export async function GET(request: Request) {
 
         if (error) throw error;
 
-        return NextResponse.json({ transactions: transactions || [] });
+        const combinedTransactions: any[] = [];
+        const transferMap = new Map<
+            string,
+            { expense?: any; income?: any; note: string }
+        >();
+
+        for (const transaction of transactions || []) {
+            const transferInfo = parseTransferDescription(transaction.description);
+            if (!transferInfo) {
+                combinedTransactions.push(transaction);
+                continue;
+            }
+
+            const entry = transferMap.get(transferInfo.transferId) ?? {
+                note: transferInfo.note,
+            };
+
+            if (transaction.type === "expense") {
+                entry.expense = transaction;
+            } else if (transaction.type === "income") {
+                entry.income = transaction;
+            }
+
+            transferMap.set(transferInfo.transferId, entry);
+        }
+
+        for (const [transferId, entry] of transferMap.entries()) {
+            const baseTransaction = entry.expense ?? entry.income;
+            if (!baseTransaction) continue;
+
+            combinedTransactions.push({
+                ...baseTransaction,
+                id: transferId,
+                type: "transfer",
+                amount: entry.expense?.amount ?? entry.income?.amount ?? 0,
+                description: entry.note || null,
+                category: {
+                    id: "transfer",
+                    name: "Transferência",
+                    icon: "🔁",
+                    color: "#60a5fa",
+                },
+                transfer: {
+                    fromAccount: entry.expense?.account ?? null,
+                    toAccount: entry.income?.account ?? null,
+                },
+            });
+        }
+
+        combinedTransactions.sort((a, b) => {
+            if (a.date !== b.date) {
+                return new Date(b.date).getTime() - new Date(a.date).getTime();
+            }
+
+            const aCreated = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const bCreated = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return bCreated - aCreated;
+        });
+
+        return NextResponse.json({ transactions: combinedTransactions });
 
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });

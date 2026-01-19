@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion"
 
 type Transaction = {
   id: string
-  type: "income" | "expense"
+  type: "income" | "expense" | "transfer"
   amount: number
   date: string
   category?: {
@@ -70,7 +70,11 @@ export default function AnalysisPage() {
       const data = await response.json()
 
       if (response.ok && data.transactions) {
-        setTransactions(filterByPeriod(data.transactions, selectedPeriod))
+        setTransactions(
+          filterByPeriod(data.transactions, selectedPeriod).filter(
+            (transaction) => transaction.type !== "transfer"
+          )
+        )
       }
     } catch (error) {
       console.error('Erro ao carregar transações:', error)
