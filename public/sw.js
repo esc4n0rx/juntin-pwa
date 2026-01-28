@@ -1,5 +1,5 @@
 // Versão do cache - IMPORTANTE: Atualize este número sempre que fizer alterações no app
-const VERSION = "1.0.5"
+const VERSION = "1.0.6"
 const CACHE_NAME = `juntin-pwa-v${VERSION}`
 const RUNTIME_CACHE = `juntin-runtime-v${VERSION}`
 
