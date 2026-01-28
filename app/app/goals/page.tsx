@@ -26,18 +26,29 @@ type Goal = {
   }
 }
 
+type Account = {
+  id: string
+  name: string
+  icon: string
+  type: string
+  current_balance: number
+}
+
 export default function GoalsPage() {
   const theme = useAppStore((state) => state.theme)
   const mode = useAppStore((state) => state.mode)
   const setMode = useAppStore((state) => state.setMode)
 
   const [goals, setGoals] = useState<Goal[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState("")
   const [target, setTarget] = useState("")
   const [selectedIcon, setSelectedIcon] = useState("🎯")
   const [customAmounts, setCustomAmounts] = useState<{ [key: string]: string }>({})
+  const [withdrawAmounts, setWithdrawAmounts] = useState<{ [key: string]: string }>({})
+  const [withdrawAccounts, setWithdrawAccounts] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
     const syncUserMode = async () => {
@@ -56,7 +67,22 @@ export default function GoalsPage() {
 
   useEffect(() => {
     fetchGoals()
+    fetchAccounts()
   }, [])
+
+  const fetchAccounts = async () => {
+    try {
+      const response = await fetch('/api/accounts')
+      const data = await response.json()
+
+      if (response.ok && data.accounts) {
+        setAccounts(data.accounts)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar contas:', error)
+      toast.error('Erro ao carregar contas')
+    }
+  }
 
   const fetchGoals = async () => {
     try {
@@ -160,6 +186,47 @@ export default function GoalsPage() {
 
     await handleAddToGoal(goalId, Number.parseFloat(customAmount))
     setCustomAmounts({ ...customAmounts, [goalId]: "" })
+  }
+
+  const handleWithdrawFromGoal = async (goalId: string) => {
+    const withdrawAmount = withdrawAmounts[goalId]
+    if (!withdrawAmount || Number.parseFloat(withdrawAmount) <= 0) {
+      toast.error("Digite um valor válido")
+      return
+    }
+
+    const accountId = withdrawAccounts[goalId] || accounts[0]?.id
+    if (!accountId) {
+      toast.error("Selecione uma conta")
+      return
+    }
+
+    try {
+      const response = await fetch('/api/goals/withdraw-amount', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          goal_id: goalId,
+          amount: Number.parseFloat(withdrawAmount),
+          account_id: accountId,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao retirar valor')
+      }
+
+      toast.success("Retirada realizada!")
+      setWithdrawAmounts({ ...withdrawAmounts, [goalId]: "" })
+      fetchGoals()
+    } catch (error: any) {
+      console.error('Erro ao retirar valor:', error)
+      toast.error(error.message || 'Erro ao retirar valor')
+    }
   }
 
   const handleDeleteGoal = async (goalId: string) => {
@@ -440,6 +507,77 @@ export default function GoalsPage() {
                             } hover:opacity-90`}
                           >
                             Adicionar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {goal.current_amount > 0 && accounts.length > 0 && (
+                      <div className="mt-4 border-t border-slate-200/40 pt-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm font-semibold ${theme === "dark" ? "text-white" : "text-slate-700"}`}>
+                            Retirar saldo
+                          </span>
+                          <span className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+                            Disponível: R$ {goal.current_amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        <div>
+                          <Label className={`mb-2 block text-xs ${theme === "dark" ? "text-white" : ""}`}>Conta destino</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {accounts.map((account) => (
+                              <button
+                                key={account.id}
+                                onClick={() =>
+                                  setWithdrawAccounts({ ...withdrawAccounts, [goal.id]: account.id })
+                                }
+                                className={`p-3 rounded-xl transition-all ${
+                                  (withdrawAccounts[goal.id] || accounts[0]?.id) === account.id
+                                    ? theme === "dark"
+                                      ? "bg-blue-900/50 ring-2 ring-blue-500"
+                                      : theme === "bw"
+                                      ? "bg-slate-200 ring-2 ring-slate-800"
+                                      : "bg-blue-100 ring-2 ring-blue-400"
+                                    : theme === "dark"
+                                    ? "bg-slate-700/50"
+                                    : "bg-slate-200/50"
+                                }`}
+                              >
+                                <div className="text-xl mb-1">{account.icon}</div>
+                                <p className={`text-xs font-medium truncate ${theme === "dark" ? "text-slate-200" : "text-slate-700"}`}>
+                                  {account.name}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            placeholder="Valor para retirar"
+                            value={withdrawAmounts[goal.id] || ""}
+                            onChange={(e) =>
+                              setWithdrawAmounts({ ...withdrawAmounts, [goal.id]: e.target.value })
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleWithdrawFromGoal(goal.id)
+                              }
+                            }}
+                            className={`flex-1 h-10 rounded-xl text-sm ${
+                              theme === "dark" ? "bg-slate-800/50 text-white placeholder:text-slate-400 border-slate-600" : ""
+                            }`}
+                          />
+                          <Button
+                            onClick={() => handleWithdrawFromGoal(goal.id)}
+                            variant="outline"
+                            className={`h-10 rounded-xl px-6 ${
+                              theme === "dark"
+                                ? "border-slate-600 text-white hover:bg-slate-700"
+                                : "border-slate-300 text-slate-700 hover:bg-slate-100"
+                            }`}
+                          >
+                            Retirar
                           </Button>
                         </div>
                       </div>
